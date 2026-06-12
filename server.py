@@ -132,8 +132,12 @@ def diagnose():
     }
 
 @app.get("/api/report")
-def get_report():
+def get_report(response: Response):
     """Return the latest generated report, diagram, and explanation as JSON."""
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    
     report_path = Path(OUTPUT_DIR) / "research_report.md"
     diagram_path = Path(OUTPUT_DIR) / "diagram.mermaid"
     explanation_path = Path(OUTPUT_DIR) / "diagram_explanation.txt"

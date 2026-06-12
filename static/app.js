@@ -1180,7 +1180,7 @@ ${bodyContent}
     // ── Fetch & Render Final Report ───────────────────────────────────────────
     function fetchReport() {
         uploadedDiagramDataUrl = null;
-        fetch(getApiPrefix() + '/api/report')
+        fetch(getApiPrefix() + '/api/report?t=' + Date.now())
             .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
             .then(data => {
                 if (data.report) {
@@ -1667,7 +1667,7 @@ ${bodyContent}
     }
 
     function initializeOrSyncWithServer() {
-        fetch(getApiPrefix() + '/api/report')
+        fetch(getApiPrefix() + '/api/report?t=' + Date.now())
             .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
             .then(data => {
                 if (data.report && 
