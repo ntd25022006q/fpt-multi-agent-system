@@ -97,10 +97,13 @@ async def serve_favicon_ico():
 @app.get("/api/diagnose")
 def diagnose():
     import os
-    from config import WORKSPACE_DIR
+    from config import WORKSPACE_DIR, CHROMA_DB_DIR
     local_model_path = os.path.join(WORKSPACE_DIR, "data", "models", "all-MiniLM-L6-v2")
     exists = os.path.exists(local_model_path)
     files = os.listdir(local_model_path) if exists else []
+    
+    chroma_exists = os.path.exists(CHROMA_DB_DIR)
+    chroma_files = os.listdir(CHROMA_DB_DIR) if chroma_exists else []
     
     from src.utils.llm_factory import _model_latencies
     
@@ -109,6 +112,9 @@ def diagnose():
         "local_model_path": local_model_path,
         "model_exists": exists,
         "model_files": files,
+        "chroma_db_dir": CHROMA_DB_DIR,
+        "chroma_exists": chroma_exists,
+        "chroma_files": chroma_files,
         "model_latencies": _model_latencies
     }
 
