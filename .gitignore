@@ -11,6 +11,7 @@ venv.bak/
 
 # Database / Local cache
 data/chroma_db/
+data/models/
 
 # Outputs (we keep templates, but avoid committing run results)
 output/*.csv
