@@ -4,22 +4,20 @@ import sys
 # Configure encoding
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-print("⌛ Pre-downloading sentence-transformers/all-MiniLM-L6-v2 model for offline use...")
+print("⌛ Pre-downloading BAAI/bge-small-en-v1.5 model via FastEmbed for offline use...")
 
 try:
-    from sentence_transformers import SentenceTransformer
+    # Set the cache path inside the workspace so it is bundled
+    from config import WORKSPACE_DIR
+    cache_dir = os.path.join(WORKSPACE_DIR, "data", "models", "fastembed_cache")
+    os.environ["FASTEMBED_CACHE_PATH"] = cache_dir
     
-    model_name = "sentence-transformers/all-MiniLM-L6-v2"
-    target_dir = os.path.join("data", "models", "all-MiniLM-L6-v2")
+    from fastembed import TextEmbedding
     
-    print(f"Downloading {model_name}...")
-    model = SentenceTransformer(model_name)
+    print(f"Downloading and caching BAAI/bge-small-en-v1.5 to local path: {cache_dir}...")
+    model = TextEmbedding(model_name="BAAI/bge-small-en-v1.5")
     
-    print(f"Saving model to local path: {target_dir}...")
-    os.makedirs(target_dir, exist_ok=True)
-    model.save(target_dir)
-    
-    print("✅ Model pre-downloaded and saved successfully!")
+    print("✅ Model pre-downloaded and cached successfully in project directory!")
     sys.exit(0)
 except Exception as e:
     print(f"❌ Failed to download model: {e}")

@@ -2,7 +2,7 @@ import os
 import math
 import re
 from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_core.documents import Document
 from rich.console import Console
 from config import RAW_DATA_DIR, CHROMA_DB_DIR, WORKSPACE_DIR
@@ -117,17 +117,13 @@ def initialize_vectorstore() -> Chroma:
 
     # 1. Initialize embeddings
     if _embeddings is None:
-        local_model_path = os.path.join(WORKSPACE_DIR, "data", "models", "all-MiniLM-L6-v2")
-        if os.path.exists(local_model_path):
-            console.print(f"[bold cyan]   ⌛ Loading sentence-transformers embeddings from local cache: {local_model_path}...")
-            model_name = local_model_path
-        else:
-            console.print("[bold cyan]   ⌛ Initializing sentence-transformers/all-MiniLM-L6-v2 embeddings from online...")
-            model_name = "sentence-transformers/all-MiniLM-L6-v2"
-            
-        _embeddings = HuggingFaceEmbeddings(
-            model_name=model_name,
-            model_kwargs={"device": "cpu"}
+        local_cache_path = os.path.join(WORKSPACE_DIR, "data", "models", "fastembed_cache")
+        os.environ["FASTEMBED_CACHE_PATH"] = local_cache_path
+        
+        console.print(f"[bold cyan]   ⌛ Initializing FastEmbed embeddings (cache: {local_cache_path})...")
+        _embeddings = FastEmbedEmbeddings(
+            model_name="BAAI/bge-small-en-v1.5",
+            cache_dir=local_cache_path
         )
     
     # 2. Check if chroma db already exists and is populated
