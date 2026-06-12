@@ -821,7 +821,11 @@ ${bodyContent}
 
             runBtn.disabled  = false;
             runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
-            fetchReport();
+            if (item.report) {
+                displayReportData(item);
+            } else {
+                fetchReport();
+            }
             isPrinting = false;
             return;
         }
@@ -1041,7 +1045,13 @@ ${bodyContent}
         }
 
         if (data.done) {
-            printQueue.push({ type: 'completion', stats: data.stats });
+            printQueue.push({ 
+                type: 'completion', 
+                stats: data.stats, 
+                report: data.report, 
+                diagram: data.diagram, 
+                explanation: data.explanation 
+            });
             if (!isPrinting) processQueue();
             if (stopBtn) stopBtn.style.display = 'none';
             localStorage.removeItem('fpt_active_search');
@@ -1049,7 +1059,7 @@ ${bodyContent}
         }
 
         if (data.type === 'node_start') {
-            highlightNode(data.node);
+            // highlightNode(data.node); // Removed to allow sequential highlighting synchronized with typewriter console output
             printAgentStartInLog(data.node);
             saveActiveSearchState('running');
         }
@@ -1177,6 +1187,71 @@ ${bodyContent}
         });
     });
 
+    // ── Render Markdown and LaTeX (KaTeX) ──────────────────────────────────────
+    function renderMarkdownReport(content) {
+        if (!reportView) return;
+        reportView.innerHTML = marked.parse(content || '');
+        if (typeof renderMathInElement === 'function') {
+            try {
+                renderMathInElement(reportView, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '\\[', right: '\\]', display: true}
+                    ],
+                    throwOnError: false
+                });
+            } catch (err) {
+                console.error('KaTeX rendering error:', err);
+            }
+        }
+    }
+
+    // ── Display Report & Diagram Data ──────────────────────────────────────────
+    function displayReportData(data) {
+        if (!data || !data.report) return;
+
+        currentMarkdown = data.report;
+        if (rawMarkdownText) rawMarkdownText.value = data.report;
+        
+        reportView.style.cssText = '';
+        if (data.report.includes('Báo cáo chưa được tạo') || data.report.includes('Report not created') || data.report.includes('not generated yet')) {
+            showUncreatedReportCard();
+        } else {
+            renderMarkdownReport(data.report);
+        }
+        
+        try {
+            if (data.diagram) {
+                renderMermaidDiagram(data.diagram);
+            } else {
+                renderMermaidDiagram(data.report);
+            }
+        } catch (mErr) {
+            console.error('Mermaid render failure:', mErr);
+        }
+
+        // Render diagram explanation
+        const expContainer = document.getElementById('mermaid-explanation-container');
+        const expContent = document.getElementById('mermaid-explanation-content');
+        if (expContainer && expContent && data.explanation) {
+            expContent.innerHTML = marked.parse(data.explanation);
+            expContainer.style.display = 'block';
+        } else if (expContainer) {
+            expContainer.style.display = 'none';
+        }
+
+        if (!data.report.includes('Request Rejected') &&
+            !data.report.includes('not generated yet') &&
+            !data.report.includes('Báo cáo chưa được tạo') &&
+            !data.report.includes('Report not created')) {
+            if (downloadGroup) downloadGroup.style.display = 'flex';
+        } else {
+            if (downloadGroup) downloadGroup.style.display = 'none';
+        }
+    }
+
     // ── Fetch & Render Final Report ───────────────────────────────────────────
     function fetchReport() {
         uploadedDiagramDataUrl = null;
@@ -1184,40 +1259,7 @@ ${bodyContent}
             .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
             .then(data => {
                 if (data.report) {
-                    currentMarkdown       = data.report;
-                    if (rawMarkdownText) rawMarkdownText.value = data.report;
-                    
-                    reportView.style.cssText = '';
-                    if (data.report.includes('Báo cáo chưa được tạo') || data.report.includes('Report not created') || data.report.includes('not generated yet')) {
-                        showUncreatedReportCard();
-                    } else {
-                        reportView.innerHTML  = marked.parse(data.report);
-                    }
-                    
-                    if (data.diagram) {
-                        renderMermaidDiagram(data.diagram);
-                    } else {
-                        renderMermaidDiagram(data.report);
-                    }
-
-                    // Render diagram explanation
-                    const expContainer = document.getElementById('mermaid-explanation-container');
-                    const expContent = document.getElementById('mermaid-explanation-content');
-                    if (expContainer && expContent && data.explanation) {
-                        expContent.innerHTML = marked.parse(data.explanation);
-                        expContainer.style.display = 'block';
-                    } else if (expContainer) {
-                        expContainer.style.display = 'none';
-                    }
-
-                    if (!data.report.includes('Request Rejected') &&
-                        !data.report.includes('not generated yet') &&
-                        !data.report.includes('Báo cáo chưa được tạo') &&
-                        !data.report.includes('Report not created')) {
-                        if (downloadGroup) downloadGroup.style.display = 'flex';
-                    } else {
-                        if (downloadGroup) downloadGroup.style.display = 'none';
-                    }
+                    displayReportData(data);
                 }
             })
             .catch(err => {
@@ -1358,7 +1400,7 @@ ${bodyContent}
                     
                     // Render detailed report
                     if (reportView) {
-                        reportView.innerHTML = marked.parse(content);
+                        renderMarkdownReport(content);
                     }
                     
                     // Silent file upload (do not show attachment badge or filename)
@@ -1682,29 +1724,7 @@ ${bodyContent}
                         topic = match[1].trim();
                     }
 
-                    currentMarkdown = data.report;
-                    if (rawMarkdownText) rawMarkdownText.value = data.report;
-                    
-                    reportView.style.cssText = '';
-                    reportView.innerHTML = marked.parse(data.report);
-
-                    uploadedDiagramDataUrl = null;
-                    if (data.diagram) {
-                        renderMermaidDiagram(data.diagram);
-                    } else {
-                        renderMermaidDiagram(data.report);
-                    }
-
-                    const expContainer = document.getElementById('mermaid-explanation-container');
-                    const expContent = document.getElementById('mermaid-explanation-content');
-                    if (expContainer && expContent && data.explanation) {
-                        expContent.innerHTML = marked.parse(data.explanation);
-                        expContainer.style.display = 'block';
-                    } else if (expContainer) {
-                        expContainer.style.display = 'none';
-                    }
-
-                    if (downloadGroup) downloadGroup.style.display = 'flex';
+                    displayReportData(data);
                 } else {
                     showUncreatedReportCard();
                     showUncreatedDiagramCard();
