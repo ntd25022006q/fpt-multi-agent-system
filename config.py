@@ -13,10 +13,10 @@ OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "https://ollama.com/v1")
 
 # Best specialized models on Ollama Cloud — optimized for functional strengths and low latency (free tier compatible)
 MODEL_GUARDRAIL_AGENT    = "ministral-3:8b"     # High-speed instruction-following gatekeeper (free)
-MODEL_RESEARCHER_AGENT   = "gemma3:12b"         # Fast, robust factual synthesis and RAG context summary (free)
-MODEL_ANALYST_AGENT      = "gemma3:12b"         # Fast, robust reasoning for trade-offs & complex evaluation matrix (free)
-MODEL_RISK_ASSESSOR_AGENT= "gemma3:12b"         # Fast, robust reasoning for compliance & multi-dimensional risk matrix (free)
-MODEL_RECOMMENDER_AGENT  = "gemma3:12b"         # Fast strategic roadmap and KPI planner (free)
+MODEL_RESEARCHER_AGENT   = "qwen3-coder-next"   # Extremely fast factual synthesis and RAG context summary (free)
+MODEL_ANALYST_AGENT      = "qwen3-coder-next"   # Extremely fast reasoning for trade-offs & complex evaluation matrix (free)
+MODEL_RISK_ASSESSOR_AGENT= "qwen3-coder-next"   # Extremely fast reasoning for compliance & multi-dimensional risk matrix (free)
+MODEL_RECOMMENDER_AGENT  = "qwen3-coder-next"   # Extremely fast strategic roadmap and KPI planner (free)
 MODEL_REPORTER_AGENT     = "qwen3-coder-next"   # Code-specialized model for reports & syntax-valid Mermaid flowcharts (free)
 
 
