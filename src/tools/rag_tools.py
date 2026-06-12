@@ -5,7 +5,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.documents import Document
 from rich.console import Console
-from config import RAW_DATA_DIR, CHROMA_DB_DIR
+from config import RAW_DATA_DIR, CHROMA_DB_DIR, WORKSPACE_DIR
 
 console = Console()
 
@@ -117,9 +117,16 @@ def initialize_vectorstore() -> Chroma:
 
     # 1. Initialize embeddings
     if _embeddings is None:
-        console.print("[bold cyan]   ⌛ Initializing sentence-transformers/all-MiniLM-L6-v2 embeddings...")
+        local_model_path = os.path.join(WORKSPACE_DIR, "data", "models", "all-MiniLM-L6-v2")
+        if os.path.exists(local_model_path):
+            console.print(f"[bold cyan]   ⌛ Loading sentence-transformers embeddings from local cache: {local_model_path}...")
+            model_name = local_model_path
+        else:
+            console.print("[bold cyan]   ⌛ Initializing sentence-transformers/all-MiniLM-L6-v2 embeddings from online...")
+            model_name = "sentence-transformers/all-MiniLM-L6-v2"
+            
         _embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            model_name=model_name,
             model_kwargs={"device": "cpu"}
         )
     
