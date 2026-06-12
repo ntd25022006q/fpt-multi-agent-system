@@ -69,26 +69,23 @@ Bạn PHẢI phản hồi theo định dạng cấu trúc sau (sử dụng chín
 [Viết một bản tóm tắt ngắn gọn, chuyên nghiệp bằng văn bản thuần túy (không sử dụng ký tự markdown như *, #, -, và không có bảng biểu) về việc tổng hợp báo cáo và thiết lập kiến trúc hệ thống.]
 
 === DETAILED REPORT ===
-# FPT Software AI-First Research & Detailed Report — Báo Cáo Nghiên Cứu Chiến Lược
+BÁO CÁO NGHIÊN CỨU CHIẾN LƯỢC FPT SOFTWARE AI-FIRST
 
-## 1. Giới thiệu chung
-[Cung cấp phần giới thiệu rõ ràng, mạch lạc và chuyên nghiệp được chia thành các phần nhỏ, súc tích bằng Markdown. Tổng hợp các ý chính sau:
-* Bối cảnh Chiến lược & Mục tiêu (lý do thực hiện nghiên cứu, ví dụ: hiện đại hóa Core Banking)
-* Yêu cầu Công nghệ Cốt lõi (tại sao sự thay đổi này là cần thiết)
-* Phạm vi & Phương pháp Đánh giá (tổng quan ngắn gọn về quá trình tổng hợp của hệ thống Multi-Agent)]
+1. Giới thiệu chung
+[Cung cấp phần giới thiệu rõ ràng, mạch lạc và chuyên nghiệp bằng văn bản thuần túy (plain text) bằng tiếng Việt có dấu. KHÔNG sử dụng bất kỳ thẻ định dạng Markdown nào như #, ##, hoặc các dấu ký tự danh sách như *, -, **, và không có bảng biểu Markdown. Hãy viết dưới dạng các đoạn văn và danh sách đánh số thuần túy như 1.1, 1.2...]
 
-## 2. Nội dung phân tích chi tiết
-[Cung cấp nội dung chi tiết được chia thành các phân hệ có cấu trúc rõ ràng với các điểm phân tích sâu sắc bằng Markdown:
-* Phân hệ 1: Cơ sở Lý thuyết & Kiến trúc Nền tảng (định nghĩa, ưu điểm và nhược điểm được trình bày dưới dạng danh sách phân điểm)
-* Phân hệ 2: Các Phương án thay thế & Đánh giá Đánh đổi (phân tích các phương án kỹ thuật, đánh đổi kiến trúc và sự phù hợp vận hành)
-* Phân hệ 3: Đánh giá Rủi ro & Tuân thủ An ninh mạng (áp dụng tiêu chuẩn FPT Secure-First, nhận diện lỗ hổng, các yếu tố tuân thủ và giải pháp giảm thiểu)
-* Phân hệ 4: Lộ trình Chiến lược & Chỉ số KPI Thực thi (lộ trình triển khai nhiều giai đoạn, nhiệm vụ cụ thể, mốc thời gian và các KPI đo lường hiệu quả kèm theo bộ phận chịu trách nhiệm)]
+2. Nội dung phân tích chi tiết
+[Cung cấp nội dung chi tiết được chia thành các phân hệ có cấu trúc rõ ràng bằng văn bản thuần túy bằng tiếng Việt có dấu (không dùng Markdown):
+- Phân hệ 1: Cơ sở lý thuyết và kiến trúc nền tảng (định nghĩa, ưu điểm và nhược điểm viết dưới dạng câu văn thông thường)
+- Phân hệ 2: Các phương án thay thế và đánh giá đánh đổi (phân tích các phương án kỹ thuật, đánh đổi kiến trúc và sự phù hợp vận hành)
+- Phân hệ 3: Đánh giá rủi ro và tuân thủ an ninh mạng (tiêu chuẩn FPT Secure-First, nhận diện lỗ hổng, tuân thủ và giải pháp giảm thiểu)
+- Phân hệ 4: Lộ trình chiến lược và chỉ số KPI thực thi (lộ trình triển khai nhiều giai đoạn, nhiệm vụ cụ thể, mốc thời gian và các KPI đo lường hiệu quả kèm theo bộ phận chịu trách nhiệm)]
 
-## 3. Khuyến nghị & Kết luận
-[Cung cấp kết luận rõ ràng, mang tính tổng hợp cao dưới dạng danh sách điểm Markdown:
-* Tóm tắt Kết quả Nghiên cứu (các bài học cốt lõi rút ra từ phân tích)
-* Tổng hợp Khuyến nghị Kiến trúc (phương án lựa chọn tối ưu)
-* Thông điệp Kết luận: Kết thúc bằng một câu kết luận duy nhất phản ánh chính xác vấn đề cốt lõi của sự chuyển đổi (ví dụ: cân bằng giữa tính mô-đun của kiến trúc và độ phức tạp vận hành), không sử dụng ký tự gạch ngang, dấu bằng hay ký hiệu đầu dòng.]
+3. Khuyến nghị & Kết luận
+[Cung cấp kết luận rõ ràng bằng văn bản thuần túy bằng tiếng Việt có dấu:
+- Tóm tắt kết quả nghiên cứu
+- Tổng hợp khuyến nghị kiến trúc
+- Thông điệp kết luận: Kết thúc bằng một câu kết luận duy nhất phản ánh chính xác vấn đề cốt lõi của sự chuyển đổi (ví dụ: cân bằng giữa tính mô-đun của kiến trúc và độ phức tạp vận hành), không sử dụng ký tự gạch ngang, dấu bằng hay ký hiệu đầu dòng.]
 
 === MERMAID DIAGRAM ===
 ```mermaid
@@ -110,7 +107,7 @@ QUAN TRỌNG VỀ ĐỊNH DẠNG LATEX:
   $$\text{KPI}_{\text{hiệu năng}} = \frac{\text{Số yêu cầu thành công}}{\text{Tổng số yêu cầu}} \times 100\%$$
 - Đảm bảo tích hợp tối thiểu 2-4 công thức hoặc biểu thức LaTeX trong báo cáo chi tiết để tăng tính chuyên nghiệp.
 
-QUAN TRỌNG: Viết DETAILED REPORT hoàn toàn bằng định dạng Markdown tiêu chuẩn (sử dụng #, ## cho tiêu đề, * cho danh sách liệt kê, và ** cho chữ in đậm). KHÔNG sử dụng các hàng dấu bằng liên tục (như '===') hoặc dải phân cách bảng Markdown bên trong nội dung báo cáo.
+QUAN TRỌNG: Viết DETAILED REPORT hoàn toàn bằng ĐỊNH DẠNG VĂN BẢN THUẦN TÚY (PLAIN TEXT), KHÔNG sử dụng bất kỳ ký tự định dạng Markdown nào (như #, ## cho tiêu đề, * hoặc - cho danh sách liệt kê, và ** cho chữ in đậm, không sử dụng bảng biểu dạng Markdown). KHÔNG sử dụng các hàng dấu bằng liên tục (như '===') bên trong nội dung báo cáo.
 QUAN TRỌNG: Báo cáo PHẢI được viết hoàn toàn bằng tiếng Việt chuẩn xác, học thuật. Không pha trộn tiếng Anh trong các tiêu đề phần và nội dung.
 """
 
@@ -174,22 +171,20 @@ Bạn PHẢI phản hồi theo định dạng cấu trúc sau (sử dụng chín
 [Viết một bản tóm tắt ngắn gọn, chuyên nghiệp bằng văn bản thuần túy (không sử dụng ký tự markdown như *, #, -, và không có bảng biểu) về câu trả lời đã tổng hợp.]
 
 === DETAILED REPORT ===
-# FPT Software AI-First Research & Detailed Report — Báo Cáo Nghiên Cứu Q&A
+BÁO CÁO NGHIÊN CỨU Q&A FPT SOFTWARE AI-FIRST
 
-## 1. Giới thiệu chung
-[Cung cấp phần giới thiệu rõ ràng, mạch lạc và chuyên nghiệp được chia thành các phần nhỏ, súc tích bằng Markdown. Tổng hợp các ý chính sau:
-* Bối cảnh Kỹ thuật & Phạm vi (giới thiệu câu hỏi và bối cảnh cốt lõi)
-* Tính tương thích với Hệ thống & Tiêu chuẩn của FPT Software]
+1. Giới thiệu chung
+[Cung cấp phần giới thiệu rõ ràng, mạch lạc và chuyên nghiệp bằng văn bản thuần túy (plain text) bằng tiếng Việt có dấu. KHÔNG sử dụng bất kỳ thẻ định dạng Markdown nào như #, ##, hoặc các dấu ký tự danh sách như *, -, **, và không có bảng biểu Markdown. Hãy viết dưới dạng các đoạn văn và danh sách đánh số thuần túy như 1.1, 1.2...]
 
-## 2. Nội dung phân tích chi tiết
-[Cung cấp nội dung chi tiết được chia thành các phân hệ có cấu trúc rõ ràng với các điểm phân tích sâu sắc bằng Markdown:
-* Phân hệ 1: Khái niệm & Phân tích Kiến trúc (giải thích chi tiết dưới dạng danh sách phân điểm)
-* Phân hệ 2: Luồng Kỹ thuật & Chi tiết Triển khai (logic vận hành, tích hợp hệ thống, hoặc các khối mã mẫu nếu có)]
+2. Nội dung phân tích chi tiết
+[Cung cấp nội dung chi tiết được chia thành các phân hệ có cấu trúc rõ ràng bằng văn bản thuần túy bằng tiếng Việt có dấu (không dùng Markdown):
+- Phân hệ 1: Khái niệm và phân tích kiến trúc (giải thích chi tiết rõ ràng)
+- Phân hệ 2: Luồng kỹ thuật và chi tiết triển khai (logic vận hành, tích hợp hệ thống, hoặc các khối mã mẫu nếu có)]
 
-## 3. Khuyến nghị & Kết luận
-[Cung cấp kết luận rõ ràng, mang tính tổng hợp cao dưới dạng danh sách điểm Markdown:
-* Kết luận & Khuyến nghị Cốt lõi
-* Thông điệp Kết luận: Kết thúc bằng một câu kết luận duy nhất phản ánh chính xác vấn đề cốt lõi của câu hỏi, không sử dụng ký tự gạch ngang, dấu bằng hay ký hiệu đầu dòng.]
+3. Khuyến nghị & Kết luận
+[Cung cấp kết luận rõ ràng bằng văn bản thuần túy bằng tiếng Việt có dấu:
+- Kết luận và khuyến nghị cốt lõi
+- Thông điệp kết luận: Kết thúc bằng một câu kết luận duy nhất phản ánh chính xác vấn đề cốt lõi của câu hỏi, không sử dụng ký tự gạch quang, dấu bằng hay ký hiệu đầu dòng.]
 
 === MERMAID DIAGRAM ===
 ```mermaid
@@ -211,7 +206,7 @@ QUAN TRỌNG VỀ ĐỊNH DẠNG LATEX:
   $$\text{KPI}_{\text{hiệu năng}} = \frac{\text{Số yêu cầu thành công}}{\text{Tổng số yêu cầu}} \times 100\%$$
 - Đảm bảo tích hợp tối thiểu 2-4 công thức hoặc biểu thức LaTeX trong báo cáo chi tiết để tăng tính chuyên nghiệp.
 
-QUAN TRỌNG: Viết DETAILED REPORT hoàn toàn bằng định dạng Markdown tiêu chuẩn (sử dụng #, ## cho tiêu đề, * cho danh sách liệt kê, và ** cho chữ in đậm). KHÔNG sử dụng các hàng dấu bằng liên tục (như '===') hoặc dải phân cách bảng Markdown bên trong nội dung báo cáo.
+QUAN TRỌNG: Viết DETAILED REPORT hoàn toàn bằng ĐỊNH DẠNG VĂN BẢN THUẦN TÚY (PLAIN TEXT), KHÔNG sử dụng bất kỳ ký tự định dạng Markdown nào (như #, ## cho tiêu đề, * hoặc - cho danh sách liệt kê, và ** cho chữ in đậm, không sử dụng bảng biểu dạng Markdown). KHÔNG sử dụng các hàng dấu bằng liên tục (như '===') bên trong nội dung báo cáo.
 QUAN TRỌNG: Báo cáo PHẢI được viết hoàn toàn bằng tiếng Việt chuẩn xác, học thuật. Không pha trộn tiếng Anh trong các tiêu đề phần và nội dung.
 """
 

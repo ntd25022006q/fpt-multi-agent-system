@@ -612,6 +612,22 @@ body {
     font-weight: 700;
 }
 
+/* ── Completed Node ────────────────────────────────────── */
+.graph-node.completed .node-icon {
+    color: #fff !important;
+    background: var(--node-color) !important;
+    border-color: var(--node-color) !important;
+    box-shadow: 0 0 10px var(--node-color) !important;
+    opacity: 0.8;
+}
+.graph-node.completed .node-label {
+    color: #fff !important;
+    background: var(--node-color) !important;
+    border-color: var(--node-color) !important;
+    opacity: 0.8;
+}
+
+
 /* Soft pulsing ring on active */
 .graph-node.active .node-icon::after {
     content: '';

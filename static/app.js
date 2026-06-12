@@ -671,6 +671,7 @@ ${bodyContent}
         hasAnalystRun = false;
         document.querySelectorAll('.graph-node').forEach(n => {
             n.classList.remove('active');
+            n.classList.remove('completed');
             n.classList.remove('node-hidden');
         });
         document.querySelectorAll('.graph-edges line').forEach(l => {
@@ -700,7 +701,6 @@ ${bodyContent}
         reporter:     { nodeId: 'node-reporter',     edgeId: 'edge-recommender-reporter',  badgeClass: 'active-reporter',     name: 'Agent Báo Cáo' }
     };
 
-    // ── Highlight Active Node ─────────────────────────────────────────────────
     function highlightNode(nodeKey) {
         const mapping = agentMappings[nodeKey];
         if (!mapping) return;
@@ -709,39 +709,55 @@ ${bodyContent}
             hasAnalystRun = true;
         }
 
-        document.querySelectorAll('.graph-node').forEach(n => n.classList.remove('active'));
-        document.getElementById(mapping.nodeId)?.classList.add('active');
+        const nodesOrder = ['guardrail', 'researcher', 'analyst', 'risk_assessor', 'recommender', 'reporter'];
+        const currentIndex = nodesOrder.indexOf(nodeKey);
 
-        let edgeId = mapping.edgeId;
-        if (nodeKey === 'reporter') {
-            if (!hasAnalystRun) {
-                // QA Flow: Direct transition from researcher to reporter
-                edgeId = 'edge-researcher-reporter';
-                
-                // Hide intermediate nodes and their edges
-                document.getElementById('node-analyst')?.classList.add('node-hidden');
-                document.getElementById('node-risk_assessor')?.classList.add('node-hidden');
-                document.getElementById('node-recommender')?.classList.add('node-hidden');
-                
-                document.getElementById('edge-researcher-analyst')?.classList.add('edge-hidden');
-                document.getElementById('edge-analyst-risk_assessor')?.classList.add('edge-hidden');
-                document.getElementById('edge-risk_assessor-recommender')?.classList.add('edge-hidden');
-                document.getElementById('edge-recommender-reporter')?.classList.add('edge-hidden');
-                
-                // Show and active direct edge
-                const directEdge = document.getElementById('edge-researcher-reporter');
-                if (directEdge) {
-                    directEdge.style.display = 'block';
-                    directEdge.classList.add('active');
+        nodesOrder.forEach((nk, idx) => {
+            const m = agentMappings[nk];
+            const nodeEl = document.getElementById(m.nodeId);
+            if (nodeEl) {
+                if (idx < currentIndex) {
+                    nodeEl.classList.add('completed');
+                    nodeEl.classList.remove('active');
+                } else if (idx === currentIndex) {
+                    nodeEl.classList.remove('completed');
+                    nodeEl.classList.add('active');
+                } else {
+                    nodeEl.classList.remove('completed');
+                    nodeEl.classList.remove('active');
                 }
-            } else {
-                // Consulting Flow
-                edgeId = 'edge-recommender-reporter';
             }
-        }
 
-        if (edgeId) {
-            document.getElementById(edgeId)?.classList.add('active');
+            // Handle edge lighting dynamically
+            const edgeId = (nk === 'reporter' && !hasAnalystRun) ? 'edge-researcher-reporter' : m.edgeId;
+            if (edgeId) {
+                const edgeEl = document.getElementById(edgeId);
+                if (edgeEl) {
+                    if (idx <= currentIndex) {
+                        edgeEl.classList.add('active');
+                    } else {
+                        edgeEl.classList.remove('active');
+                    }
+                }
+            }
+        });
+
+        if (nodeKey === 'reporter' && !hasAnalystRun) {
+            // QA Flow: Hide intermediate nodes and their edges
+            document.getElementById('node-analyst')?.classList.add('node-hidden');
+            document.getElementById('node-risk_assessor')?.classList.add('node-hidden');
+            document.getElementById('node-recommender')?.classList.add('node-hidden');
+            
+            document.getElementById('edge-researcher-analyst')?.classList.add('edge-hidden');
+            document.getElementById('edge-analyst-risk_assessor')?.classList.add('edge-hidden');
+            document.getElementById('edge-risk_assessor-recommender')?.classList.add('edge-hidden');
+            document.getElementById('edge-recommender-reporter')?.classList.add('edge-hidden');
+            
+            const directEdge = document.getElementById('edge-researcher-reporter');
+            if (directEdge) {
+                directEdge.style.display = 'block';
+                directEdge.classList.add('active');
+            }
         }
 
         activeAgentBadge.textContent = mapping.name;
@@ -773,11 +789,36 @@ ${bodyContent}
         });
     }
 
+    function stripMarkdown(text) {
+        if (!text) return '';
+        return text
+            .replace(/\*\*([^*]+)\*\*/g, '$1')
+            .replace(/\*([^*]+)\*/g, '$1')
+            .replace(/`([^`]+)`/g, '$1')
+            .replace(/^#+\s+(.+)$/gm, '$1')
+            .replace(/^\s*[-*+]\s+/gm, '')
+            .replace(/^\s*\d+[\.\-]\s+/gm, '')
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/_{2,}/g, '')
+            .replace(/\*{2,}/g, '')
+            .trim();
+    }
+
     // ── Print Queue ──────────────────────────────────────────────────────────
     async function processQueue() {
         if (printQueue.length === 0) { isPrinting = false; return; }
         isPrinting = true;
         const item = printQueue.shift();
+
+        // Start marker (sequentially queued agent start)
+        if (item.type === 'start') {
+            highlightNode(item.node); // Sequential highlight transition
+            printAgentStartInLog(item.node);
+            isPrinting = false;
+            processQueue();
+            return;
+        }
 
         // Completion marker
         if (item.type === 'completion') {
@@ -881,7 +922,7 @@ ${bodyContent}
             
             const thinkingContent = document.createElement('div');
             thinkingContent.style.cssText = 'white-space: pre-line; line-height: 1.5; padding: 4px 0;';
-            thinkingContent.textContent = item.thinking;
+            thinkingContent.textContent = stripMarkdown(item.thinking);
             thinkingContainer.appendChild(thinkingContent);
             consoleOutput.appendChild(thinkingContainer);
         }
@@ -891,7 +932,7 @@ ${bodyContent}
         logBody.style.cssText = `color:#b0bec8;padding-left:12px;border-left:2px solid ${titleColor};margin-bottom:12px;line-height:1.55;`;
         consoleOutput.appendChild(logBody);
 
-        await typeText(logBody, item.content || 'Không có thông tin ghi nhận.', 4);
+        await typeText(logBody, stripMarkdown(item.content) || 'Không có thông tin ghi nhận.', 4);
         saveActiveSearchState('running');
         processQueue();
     }
@@ -1059,8 +1100,8 @@ ${bodyContent}
         }
 
         if (data.type === 'node_start') {
-            // highlightNode(data.node); // Removed to allow sequential highlighting synchronized with typewriter console output
-            printAgentStartInLog(data.node);
+            printQueue.push({ type: 'start', node: data.node });
+            if (!isPrinting) processQueue();
             saveActiveSearchState('running');
         }
 

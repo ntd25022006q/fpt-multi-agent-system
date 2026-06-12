@@ -1,8 +1,6 @@
 import os
 import math
 import re
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_core.documents import Document
 from rich.console import Console
 from config import RAW_DATA_DIR, CHROMA_DB_DIR, WORKSPACE_DIR
@@ -102,7 +100,7 @@ class CustomBM25:
         doc_scores.sort(key=lambda x: x[1], reverse=True)
         return doc_scores[:k]
 
-def initialize_vectorstore() -> Chroma:
+def initialize_vectorstore():
     """Build or load ChromaDB from data/raw/ directories.
     
     If the directory already contains persisted data, load from disk.
@@ -111,6 +109,8 @@ def initialize_vectorstore() -> Chroma:
     Returns:
         Chroma vector store instance.
     """
+    from langchain_community.vectorstores import Chroma
+    from langchain_community.embeddings import FastEmbedEmbeddings
     global _embeddings, _vectorstore
     if _vectorstore is not None:
         return _vectorstore
@@ -192,59 +192,47 @@ def get_retriever():
     vectorstore = initialize_vectorstore()
     return vectorstore.as_retriever(search_kwargs={"k": 5})
 
-def retrieve_hybrid(query: str, k: int = 5) -> list[Document]:
-    """Retrieve top k documents using Reciprocal Rank Fusion of ChromaDB and Custom BM25.
-    
-    Args:
-        query: Search query.
-        k: Number of documents to return.
-        
-    Returns:
-        List of merged and deduplicated Documents.
-    """
+def get_all_docs() -> list[Document]:
+    """Load markdown and text files from RAW_DATA_DIR directly and chunk them in memory."""
     global _all_docs
-    chroma_db = initialize_vectorstore()
+    if _all_docs is not None:
+        return _all_docs
     
-    # 1. Load cached documents from ChromaDB to build CustomBM25 index
-    if _all_docs is None:
-        data = chroma_db.get(include=["documents", "metadatas"])
-        _all_docs = []
-        if data and data.get("documents"):
-            for text, meta in zip(data["documents"], data["metadatas"]):
-                _all_docs.append(Document(page_content=text, metadata=meta))
-            
-    if not _all_docs:
-        console.print("[yellow]   ⚠️ ChromaDB cache is empty. Falling back to default dense search.")
-        return chroma_db.similarity_search(query, k=k)
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+    _all_docs = []
+    if not os.path.exists(RAW_DATA_DIR):
+        return []
         
-    # 2. Run Dense Search
-    dense_results = chroma_db.similarity_search(query, k=k * 2)
-    
-    # 3. Run Sparse Search (Custom BM25)
-    bm25 = CustomBM25(_all_docs)
-    bm25_results_with_scores = bm25.search(query, k=k * 2)
-    bm25_results = [doc for doc, score in bm25_results_with_scores]
-    
-    # 4. Perform Reciprocal Rank Fusion (RRF)
-    rrf_scores = {}
-    doc_map = {}
-    
-    def get_doc_key(doc: Document) -> str:
-        return doc.page_content.strip()
+    raw_docs = []
+    for filename in os.listdir(RAW_DATA_DIR):
+        if filename.endswith(".md") or filename.endswith(".txt"):
+            filepath = os.path.join(RAW_DATA_DIR, filename)
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    content = f.read()
+                raw_docs.append(Document(page_content=content, metadata={"source": filepath}))
+            except Exception:
+                pass
+                
+    if not raw_docs:
+        return []
         
-    for rank, doc in enumerate(dense_results, start=1):
-        key = get_doc_key(doc)
-        doc_map[key] = doc
-        rrf_scores[key] = rrf_scores.get(key, 0.0) + (1.0 / (60.0 + rank))
-        
-    for rank, doc in enumerate(bm25_results, start=1):
-        key = get_doc_key(doc)
-        doc_map[key] = doc
-        rrf_scores[key] = rrf_scores.get(key, 0.0) + (1.0 / (60.0 + rank))
-        
-    # Sort by RRF score descending
-    sorted_keys = sorted(rrf_scores.keys(), key=lambda x: rrf_scores[x], reverse=True)
-    return [doc_map[key] for key in sorted_keys[:k]]
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=150,
+        separators=["\n## ", "\n### ", "\n#### ", "\n\n", "\n", " "]
+    )
+    _all_docs = splitter.split_documents(raw_docs)
+    return _all_docs
+
+def retrieve_hybrid(query: str, k: int = 5) -> list[Document]:
+    """Retrieve top k documents using lightweight, in-memory BM25 search."""
+    docs = get_all_docs()
+    if not docs:
+        return []
+    bm25 = CustomBM25(docs)
+    bm25_results_with_scores = bm25.search(query, k=k)
+    return [doc for doc, score in bm25_results_with_scores]
 
 def expand_query(topic: str) -> list[str]:
     """Generate search variations using a lightweight model call to improve recall.
@@ -285,7 +273,7 @@ def expand_query(topic: str) -> list[str]:
         return [topic]
 
 def get_rag_context(topic: str, query_type: str = "consulting") -> tuple[str, list[str]]:
-    """Expand topic, retrieve hybrid results, deduplicate context and extract citations.
+    """Retrieve hybrid results, deduplicate context and extract citations.
     
     Args:
         topic: User topic.
@@ -294,12 +282,9 @@ def get_rag_context(topic: str, query_type: str = "consulting") -> tuple[str, li
     Returns:
         Tuple containing combined context string and list of document citations.
     """
-    console.print(f"[cyan]   🔍 Running RAG Search on topic: '{topic}' (Type: {query_type})...[/]")
-    if query_type == "qa":
-        queries = [topic]
-    else:
-        queries = expand_query(topic)
-    console.print(f"   Generated search variations: {queries}")
+    console.print(f"[cyan]   🔍 Running fast RAG Search on topic: '{topic}' (Type: {query_type})...[/]")
+    # Bypass query expansion entirely for instant retrieval
+    queries = [topic]
     
     all_retrieved = []
     for q in queries:
