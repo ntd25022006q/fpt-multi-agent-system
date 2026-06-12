@@ -28,38 +28,132 @@ class QueueCallbackHandler(AsyncCallbackHandler):
             "node": self.node_name,
             "token": token
         })
+import time
+import urllib.request
+import json
+import threading
+
+# Dynamic model health & latency cache
+_model_latencies: dict = {}
+_latency_checker_started = False
+_latency_lock = threading.Lock()
+
+def check_model_latencies_sync():
+    """Verify availability and latency of Ollama models to build an optimized fallback list."""
+    global _model_latencies
+    models_to_check = ["gemma3:12b", "ministral-3:8b", "qwen3-coder-next", "gemma3:27b"]
+    new_latencies = {}
+    
+    for model in models_to_check:
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": "ping"}],
+            "max_tokens": 1
+        }
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            f"{OLLAMA_BASE_URL}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OLLAMA_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            data=data,
+            method="POST"
+        )
+        
+        t0 = time.time()
+        try:
+            with urllib.request.urlopen(req, timeout=3.0) as response:
+                response.read()
+                latency = time.time() - t0
+                new_latencies[model] = latency
+        except Exception:
+            new_latencies[model] = 999.0  # Offline / Unhealthy penalty
+            
+    with _latency_lock:
+        _model_latencies = new_latencies
+
+def start_latency_checker():
+    """Start background daemon thread to periodically update model latencies."""
+    global _latency_checker_started
+    with _latency_lock:
+        if _latency_checker_started:
+            return
+        _latency_checker_started = True
+        
+    def worker():
+        # Quick initial check
+        try:
+            check_model_latencies_sync()
+        except Exception:
+            pass
+        while True:
+            time.sleep(300)  # Re-check every 5 minutes
+            try:
+                check_model_latencies_sync()
+            except Exception:
+                pass
+                
+    t = threading.Thread(target=worker, daemon=True)
+    t.start()
 
 def create_llm(model: str, temperature: float = 0.2, max_tokens: int = 2000, streaming: bool = False):
     """Create a ChatOpenAI wrapper instance pointing to the Ollama Cloud API,
-    equipped with fallbacks from the best free Ollama Cloud models.
+    equipped with fallbacks from the best free Ollama Cloud models sorted by latency.
     """
+    # Start latency checker in background
+    try:
+        start_latency_checker()
+    except Exception:
+        pass
+
+    latencies = _model_latencies
+    if not latencies:
+        # Default order if cache is not populated yet
+        sorted_models = ["gemma3:12b", "ministral-3:8b", "qwen3-coder-next", "gemma3:27b"]
+    else:
+        # Sort based on latency (lowest/healthiest first)
+        sorted_models = sorted(
+            ["gemma3:12b", "ministral-3:8b", "qwen3-coder-next", "gemma3:27b"],
+            key=lambda m: latencies.get(m, 1.0)
+        )
+
+    # Determine primary model and fallback candidates
+    primary_latency = latencies.get(model, 1.0)
+    
+    # If the requested primary model is healthy (latency < 10s), try it first
+    if primary_latency < 10.0:
+        primary_model = model
+        fallback_candidates = [m for m in sorted_models if m != model]
+    else:
+        # If primary model is offline/unhealthy, bypass it and try the healthiest model first
+        primary_model = sorted_models[0]
+        fallback_candidates = [m for m in sorted_models if m != primary_model] + [model]
+
     primary_llm = ChatOpenAI(
-        model=model,
+        model=primary_model,
         api_key=OLLAMA_API_KEY,
         base_url=OLLAMA_BASE_URL,
         temperature=temperature,
-        request_timeout=15,  # 15s timeout for primary model for fast fallback trigger
-        max_retries=0,       # Disable retries to fail over instantly
+        timeout=15,          # 15s timeout
+        max_retries=0,       # Fail over instantly
         max_tokens=max_tokens,
         streaming=streaming
     )
     
-    # Pool of best free agent models ordered by speed & stability
-    free_models = ["gemma3:12b", "ministral-3:8b", "qwen3-coder-next", "gemma3:27b"]
-    
-    # Determine fallback candidates (exclude the current primary model)
-    fallback_candidates = [m for m in free_models if m != model]
-    
     fallbacks = []
     for fallback_model in fallback_candidates:
+        # Skip models that are known to be down (latency >= 999s) to avoid unnecessary timeouts
+        if latencies.get(fallback_model, 1.0) >= 999.0:
+            continue
         fallbacks.append(
             ChatOpenAI(
                 model=fallback_model,
                 api_key=OLLAMA_API_KEY,
                 base_url=OLLAMA_BASE_URL,
                 temperature=temperature,
-                request_timeout=10,  # 10s timeout for fallback models
-                max_retries=0,       # Disable retries to speed up fallback chain
+                timeout=10,          # 10s timeout
+                max_retries=0,
                 max_tokens=max_tokens,
                 streaming=streaming
             )
