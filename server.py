@@ -94,6 +94,24 @@ async def serve_favicon_ico():
 #  API ROUTES
 # ─────────────────────────────────────────────────────────────────────────────
 
+@app.get("/api/diagnose")
+def diagnose():
+    import os
+    from config import WORKSPACE_DIR
+    local_model_path = os.path.join(WORKSPACE_DIR, "data", "models", "all-MiniLM-L6-v2")
+    exists = os.path.exists(local_model_path)
+    files = os.listdir(local_model_path) if exists else []
+    
+    from src.utils.llm_factory import _model_latencies
+    
+    return {
+        "workspace": WORKSPACE_DIR,
+        "local_model_path": local_model_path,
+        "model_exists": exists,
+        "model_files": files,
+        "model_latencies": _model_latencies
+    }
+
 @app.get("/api/report")
 def get_report():
     """Return the latest generated report, diagram, and explanation as JSON."""
