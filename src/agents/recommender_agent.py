@@ -1,0 +1,111 @@
+import time
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from src.state import ResearchState
+from src.utils.llm_factory import create_llm, parse_agent_json, get_actual_model_used
+from src.utils.display import print_agent_start, print_agent_info, print_agent_complete
+from config import MODEL_RECOMMENDER_AGENT
+
+RECOMMENDER_PROMPT = """You are the Recommender Agent in FPT Software's AI-First Research & Consulting suite.
+Your role is to formulate strategic recommendations and define measurable KPIs for the proposed transition or implementation.
+
+Autonomously design roadmap phases and select relevant KPIs that logically fit the query.
+
+You MUST respond using the following structured format (use the exact markers):
+
+=== THINKING ===
+[Write your step-by-step thinking process in Vietnamese/English (matching the query language). Design the implementation roadmap phases, select relevant measurable metrics/KPIs, and justify them. This section will be collapsible in the UI.]
+
+=== CONSOLE MESSAGE ===
+[Write a clean, professional, plain-text summary of your strategic recommendations, phase roadmap, and metrics. Do NOT use any markdown characters like asterisks, bullet points, or hashtags. Keep it as friendly plain text paragraphs.]
+
+=== DETAILED REPORT ===
+Strategic Recommendations & Roadmap:
+Provide a structured, multi-phase roadmap (e.g. Phase 1, Phase 2, Phase 3) containing action items that are highly specific to this topic as plain text.
+
+Performance & Success KPIs:
+[Provide a list of success metrics, target KPIs, measurement frequencies, and owners. Do NOT use markdown tables (no pipes |, dashes, or colons for tables). Present this clearly in plain text.]
+
+IMPORTANT: You MUST write the DETAILED REPORT entirely as plain text. Do NOT use any markdown formatting (no hashtags like # or ###, no bold asterisks **, no bullet points with - or *, no markdown links).
+"""
+
+from langchain_core.runnables import RunnableConfig
+
+async def recommender_node(state: ResearchState, config: RunnableConfig = None) -> dict:
+    """Recommender agent node execution."""
+    start_time = time.time()
+    print_agent_start("Recommender Agent", "Prescribing roadmap phases and business KPIs...")
+    
+    stream_queue = config.get("configurable", {}).get("stream_queue") if config else None
+    if stream_queue:
+        await stream_queue.put({
+            "type": "node_start",
+            "node": "recommender"
+        })
+        
+    lang = state.get("language", "vi")
+    lang_instruction = (
+        "\nIMPORTANT: The user has asked the question in English. You MUST output both the CONSOLE MESSAGE and the DETAILED REPORT entirely in English."
+        if lang == "en" else
+        "\nIMPORTANT: The user has asked the question in Vietnamese. You MUST output both the CONSOLE MESSAGE and the DETAILED REPORT entirely in Vietnamese."
+    )
+    human_content = (
+        f"Topic: {state['topic']}\n\n"
+        f"Analysis:\n{state['analysis']}\n\n"
+        f"Risks:\n{state['risks']}\n\n"
+        f"{lang_instruction}"
+    )
+
+    # Always stream — real-time token delivery
+    llm = create_llm(MODEL_RECOMMENDER_AGENT, temperature=0.2, max_tokens=2000, streaming=True)
+    
+    call_config = {}
+    if stream_queue:
+        from src.utils.llm_factory import QueueCallbackHandler
+        call_config["callbacks"] = [QueueCallbackHandler(stream_queue, "recommender")]
+        
+    response = await llm.ainvoke([
+        SystemMessage(content=RECOMMENDER_PROMPT),
+        HumanMessage(content=human_content)
+    ], config=call_config)
+    
+    parsed = parse_agent_json(response.content, "recommendations")
+    recommendations = parsed.get("recommendations", response.content)
+    console_message = parsed.get("console_message", "Tôi đã đề xuất xong lộ trình triển khai và hệ thống KPI.")
+    
+    print_agent_info([
+        "Compiled success metrics and multi-phase roadmap",
+        f"Length of recommendations: {len(recommendations)} characters"
+    ])
+    
+    tokens = 0
+    if hasattr(response, "usage_metadata") and response.usage_metadata:
+        tokens = response.usage_metadata.get("total_tokens", 0)
+    elif "token_usage" in response.response_metadata:
+        tokens = response.response_metadata["token_usage"].get("total_tokens", 0)
+        
+    if tokens == 0:
+        tokens = (len(RECOMMENDER_PROMPT) + len(human_content) + len(response.content)) // 4
+        
+    duration = time.time() - start_time
+    print_agent_complete("Recommender Agent", duration, tokens)
+    
+    actual_model = get_actual_model_used("recommender", MODEL_RECOMMENDER_AGENT)
+    toks_per_sec = round(tokens / duration, 1) if duration > 0 else 0
+    
+    if stream_queue:
+        await stream_queue.put({
+            "type": "node_end",
+            "node": "recommender",
+            "content": console_message,
+            "thinking": parsed.get("thinking", ""),
+            "tokens": tokens,
+            "duration": duration,
+            "model": actual_model,
+            "toks_per_sec": toks_per_sec
+        })
+        
+    return {
+        "recommendations": recommendations,
+        "messages": [response]
+    }
+
