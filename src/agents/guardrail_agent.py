@@ -81,17 +81,18 @@ async def guardrail_node(state: ResearchState, config: RunnableConfig = None) ->
         data = json.loads(detailed_data)
         irrelevant = not data.get("relevant", False)
         query_type = data.get("query_type", "consulting")
-        language = data.get("language", "vi")
+        language = "vi" # Force language to always be Vietnamese as requested by the user
         reason = data.get("reason", "No reason provided.")
     except Exception:
         # Check if relevant was outputted somewhere
         if '"relevant": true' in response.content.lower() or '"relevant":true' in response.content.lower():
             irrelevant = False
             query_type = "consulting"
-            language = "vi"
+            language = "vi" # Force language to always be Vietnamese as requested by the user
             reason = "Fallback JSON check approved the query."
         else:
             irrelevant = True
+            language = "vi"
             reason = "Yêu cầu nằm ngoài phạm vi hỗ trợ."
             
     if not irrelevant:

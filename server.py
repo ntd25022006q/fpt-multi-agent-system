@@ -60,14 +60,14 @@ async def add_bypass_headers(request: Request, call_next):
 
 @app.on_event("startup")
 async def startup_event():
-    # Pre-initialize RAG Vector Store on startup so it is cached in memory
-    from src.tools.rag_tools import initialize_vectorstore
-    print("⌛ Pre-initializing RAG Vector Store in memory...")
+    # Pre-initialize RAG cached documents in memory
+    from src.tools.rag_tools import get_all_docs
+    print("⌛ Pre-initializing RAG documents in memory...")
     try:
-        await asyncio.to_thread(initialize_vectorstore)
-        print("✅ RAG Vector Store cached in memory and ready!")
+        await asyncio.to_thread(get_all_docs)
+        print("✅ RAG documents cached in memory and ready!")
     except Exception as e:
-        print(f"⚠️ Failed to pre-initialize vector store: {e}")
+        print(f"⚠️ Failed to pre-initialize RAG documents: {e}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
