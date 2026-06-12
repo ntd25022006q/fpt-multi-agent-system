@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Database / Local cache
+data/chroma_db/
+
+# Outputs (we keep templates, but avoid committing run results)
+output/*.csv
+output/*.mermaid
+output/*.txt
+output/research_report.md
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Environment / Vercel Secrets
+.env
+.env.*
+.vercel/
+
