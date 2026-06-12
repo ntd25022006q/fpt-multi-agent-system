@@ -293,8 +293,14 @@ async def run_agents(topic: str):
                     Path(OUTPUT_DIR).mkdir(exist_ok=True)
                     (Path(OUTPUT_DIR) / "research_report.md").write_text(final_report, encoding="utf-8")
                     
-                    # Yield completion with stats and individual token/model/speed counts
-                    yield f"data: {json.dumps({'done': True, 'stats': {'time': f'{elapsed:.3f}s', 'tokens': f'{total_tokens:,}', 'agents': agents_count, 'irrelevant': final_state.get('irrelevant', False), 'agent_tokens': agent_tokens, 'agent_models': agent_models, 'agent_toks_per_sec': agent_toks_per_sec, 'agent_durations': agent_durations}}, ensure_ascii=False)}\n\n"
+                    # Read diagram and explanation if they exist to pass directly in SSE done event
+                    diagram_path = Path(OUTPUT_DIR) / "diagram.mermaid"
+                    explanation_path = Path(OUTPUT_DIR) / "diagram_explanation.txt"
+                    diagram = diagram_path.read_text(encoding="utf-8") if diagram_path.exists() else ""
+                    explanation = explanation_path.read_text(encoding="utf-8") if explanation_path.exists() else ""
+                    
+                    # Yield completion with stats, report, diagram, explanation and individual token/model/speed counts
+                    yield f"data: {json.dumps({'done': True, 'report': final_report, 'diagram': diagram, 'explanation': explanation, 'stats': {'time': f'{elapsed:.3f}s', 'tokens': f'{total_tokens:,}', 'agents': agents_count, 'irrelevant': final_state.get('irrelevant', False), 'agent_tokens': agent_tokens, 'agent_models': agent_models, 'agent_toks_per_sec': agent_toks_per_sec, 'agent_durations': agent_durations}}, ensure_ascii=False)}\n\n"
                 elif event.get("type") == "node_end":
                     node_name = event.get("node")
                     tokens = event.get("tokens", 0)
