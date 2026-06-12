@@ -284,17 +284,21 @@ def expand_query(topic: str) -> list[str]:
         console.print(f"[red]   ⚠️ Query expansion failed: {str(e)}. Using raw topic.")
         return [topic]
 
-def get_rag_context(topic: str) -> tuple[str, list[str]]:
+def get_rag_context(topic: str, query_type: str = "consulting") -> tuple[str, list[str]]:
     """Expand topic, retrieve hybrid results, deduplicate context and extract citations.
     
     Args:
         topic: User topic.
+        query_type: Type of query ('qa' or 'consulting').
         
     Returns:
         Tuple containing combined context string and list of document citations.
     """
-    console.print(f"[cyan]   🔍 Running RAG Search on topic: '{topic}'...[/]")
-    queries = expand_query(topic)
+    console.print(f"[cyan]   🔍 Running RAG Search on topic: '{topic}' (Type: {query_type})...[/]")
+    if query_type == "qa":
+        queries = [topic]
+    else:
+        queries = expand_query(topic)
     console.print(f"   Generated search variations: {queries}")
     
     all_retrieved = []

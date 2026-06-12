@@ -135,7 +135,7 @@ async def researcher_node(state: ResearchState, config: RunnableConfig = None) -
         
     # 1. Fetch RAG Context (run in a thread to keep event loop responsive)
     import asyncio
-    context, citations = await asyncio.to_thread(get_rag_context, state['topic'])
+    context, citations = await asyncio.to_thread(get_rag_context, state['topic'], state.get('query_type', 'consulting'))
     
     # 2. Language instruction
     lang = state.get("language", "vi")
