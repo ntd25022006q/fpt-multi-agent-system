@@ -13,11 +13,8 @@ venv.bak/
 data/chroma_db/
 data/models/
 
-# Outputs (we keep templates, but avoid committing run results)
-output/*.csv
-output/*.mermaid
-output/*.txt
-output/research_report.md
+# Outputs
+output/
 
 # OS / Editor
 .DS_Store
