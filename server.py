@@ -45,6 +45,7 @@ app.mount("/assets", StaticFiles(directory=str(STATIC_DIR)), name="assets")
 BYPASS_HEADERS = {
     "Bypass-Tunnel-Reminder": "true",
     "ngrok-skip-browser-warning": "true",
+    "X-Accel-Buffering": "no",
 }
 
 
@@ -55,6 +56,18 @@ async def add_bypass_headers(request: Request, call_next):
     for k, v in BYPASS_HEADERS.items():
         response.headers[k] = v
     return response
+
+
+@app.on_event("startup")
+async def startup_event():
+    # Pre-initialize RAG Vector Store on startup so it is cached in memory
+    from src.tools.rag_tools import initialize_vectorstore
+    print("⌛ Pre-initializing RAG Vector Store in memory...")
+    try:
+        await asyncio.to_thread(initialize_vectorstore)
+        print("✅ RAG Vector Store cached in memory and ready!")
+    except Exception as e:
+        print(f"⚠️ Failed to pre-initialize vector store: {e}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
