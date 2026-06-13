@@ -43,10 +43,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (serverUrlInput) {
         let defaultUrl = 'https://fpt-multi-agent-system.onrender.com';
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '0.0.0.0' || window.location.port !== '') {
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '0.0.0.0' || window.location.port !== '';
+        if (isLocal) {
             defaultUrl = window.location.origin;
         }
-        serverUrlInput.value = localStorage.getItem('fpt_server_url') || defaultUrl;
+        
+        // Force local origin if accessing via localhost to prevent loading cached Render URL from localStorage
+        const storedUrl = localStorage.getItem('fpt_server_url');
+        if (isLocal) {
+            serverUrlInput.value = defaultUrl;
+            localStorage.setItem('fpt_server_url', defaultUrl);
+        } else {
+            serverUrlInput.value = storedUrl || defaultUrl;
+        }
+        
         serverUrlInput.addEventListener('input', () => {
             localStorage.setItem('fpt_server_url', serverUrlInput.value.trim());
             checkServerConnection();
