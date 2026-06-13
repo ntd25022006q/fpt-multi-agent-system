@@ -1565,21 +1565,71 @@ tbody tr:nth-child(even) td{background:#f8fafc;}
     function displayReportData(data) {
         if (!data || !data.report) return;
 
-        currentMarkdown = data.report;
-        if (rawMarkdownText) rawMarkdownText.value = data.report;
+        let reportText = data.report;
+        let diagramText = data.diagram || '';
+        let explanationText = data.explanation || '';
+
+        // Robust Fallback Parser if standard section markers are missing
+        const hasMarkers = reportText.includes('=== DETAILED REPORT ===') || 
+                           reportText.includes('=== CONSOLE MESSAGE ===') || 
+                           reportText.includes('=== THINKING ===');
+
+        if (!hasMarkers) {
+            if (reportText.includes('```mermaid')) {
+                const regex = /```mermaid\s*([\s\S]*?)\s*```/i;
+                const match = reportText.match(regex);
+                if (match) {
+                    diagramText = match[1].trim();
+                    const idx = reportText.indexOf('```mermaid');
+                    const beforeDiagram = reportText.substring(0, idx).trim();
+                    const endIdx = reportText.indexOf('```', idx + 10);
+                    let afterDiagram = '';
+                    if (endIdx !== -1) {
+                        afterDiagram = reportText.substring(endIdx + 3).trim();
+                    }
+                    reportText = beforeDiagram;
+                    explanationText = afterDiagram;
+                }
+            }
+            
+            if (reportText.trim().length === 0 && explanationText.trim().length > 0) {
+                reportText = explanationText;
+                explanationText = '';
+            }
+
+            // Sync Console Message with the first body paragraph
+            const paragraphs = reportText.split('\n').map(p => p.trim()).filter(p => p.length > 0);
+            let firstPara = paragraphs.length > 0 ? paragraphs[0] : '';
+            if (firstPara.startsWith('#') && paragraphs.length > 1) {
+                firstPara = paragraphs[1];
+            }
+            if (firstPara) {
+                const cleanSummary = cleanInternalFilenames(stripMarkdown(firstPara));
+                const consoleLogs = consoleOutput.querySelectorAll('.console-log');
+                if (consoleLogs.length > 0) {
+                    const lastLog = consoleLogs[consoleLogs.length - 1];
+                    if (lastLog && !lastLog.querySelector('summary') && !lastLog.querySelector('span')) {
+                        lastLog.textContent = cleanSummary;
+                    }
+                }
+            }
+        }
+
+        currentMarkdown = reportText;
+        if (rawMarkdownText) rawMarkdownText.value = reportText;
         
         reportView.style.cssText = '';
-        if (data.report.includes('Báo cáo chưa được tạo') || data.report.includes('Report not created') || data.report.includes('not generated yet')) {
+        if (reportText.includes('Báo cáo chưa được tạo') || reportText.includes('Report not created') || reportText.includes('not generated yet')) {
             showUncreatedReportCard();
         } else {
-            renderMarkdownReport(data.report);
+            renderMarkdownReport(reportText);
         }
         
         try {
-            if (data.diagram) {
-                renderMermaidDiagram(data.diagram);
+            if (diagramText) {
+                renderMermaidDiagram(diagramText);
             } else {
-                renderMermaidDiagram(data.report);
+                renderMermaidDiagram(reportText);
             }
         } catch (mErr) {
             console.error('Mermaid render failure:', mErr);
@@ -1588,17 +1638,17 @@ tbody tr:nth-child(even) td{background:#f8fafc;}
         // Render diagram explanation
         const expContainer = document.getElementById('mermaid-explanation-container');
         const expContent = document.getElementById('mermaid-explanation-content');
-        if (expContainer && expContent && data.explanation) {
-            expContent.innerHTML = marked.parse(data.explanation);
+        if (expContainer && expContent && explanationText) {
+            expContent.innerHTML = marked.parse(explanationText);
             expContainer.style.display = 'block';
         } else if (expContainer) {
             expContainer.style.display = 'none';
         }
 
-        if (!data.report.includes('Request Rejected') &&
-            !data.report.includes('not generated yet') &&
-            !data.report.includes('Báo cáo chưa được tạo') &&
-            !data.report.includes('Report not created')) {
+        if (!reportText.includes('Request Rejected') &&
+            !reportText.includes('not generated yet') &&
+            !reportText.includes('Báo cáo chưa được tạo') &&
+            !reportText.includes('Report not created')) {
             if (downloadGroup) downloadGroup.style.display = 'flex';
         } else {
             if (downloadGroup) downloadGroup.style.display = 'none';
