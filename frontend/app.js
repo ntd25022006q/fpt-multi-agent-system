@@ -123,6 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let eventSource   = null;
     let hasCompletedSuccessfully = false;
+    let sseErrorCount = 0;
+    const MAX_SSE_ERRORS = 5;
     let runStartTime  = null;
     let timerInterval = null;
 
@@ -893,6 +895,33 @@ ${bodyContent}
         return cleaned;
     }
 
+    function cleanReportContent(text) {
+        if (!text) return '';
+        let cleaned = text;
+        
+        // Remove any markdown code block of mermaid
+        cleaned = cleaned.replace(/```mermaid[\s\S]*?```/gi, '');
+        
+        // Remove standard section headers if they are inside the report content
+        cleaned = cleaned.replace(/===[\s\S]*?===/g, '');
+        
+        // Remove specific leaked words/lines related to markers
+        const lines = cleaned.split('\n');
+        const filteredLines = lines.filter(line => {
+            const upper = line.trim().toUpperCase();
+            if (upper.includes('MERMAID DIAGRAM') || 
+                upper.includes('DIAGRAM EXPLANATION') || 
+                upper.includes('GIẢI THÍCH SƠ ĐỒ') || 
+                upper.includes('SƠ ĐỒ MERMAID') || 
+                upper.includes('BIỂU ĐỒ MERMAID')) {
+                return false;
+            }
+            return true;
+        });
+        
+        return filteredLines.join('\n').trim();
+    }
+
     // ── Print Queue ──────────────────────────────────────────────────────────
     async function processQueue() {
         if (printQueue.length === 0) { isPrinting = false; return; }
@@ -1471,6 +1500,7 @@ ${bodyContent}
 
         resetUI();
         hasCompletedSuccessfully = false;
+        sseErrorCount = 0;
         runBtn.disabled  = true;
         runBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang chạy…';
         if (stopBtn) stopBtn.style.display = 'block';
@@ -1496,6 +1526,7 @@ ${bodyContent}
         eventSource = new EventSource(getApiPrefix() + `/api/run?topic=${encodeURIComponent(topic)}`);
 
         eventSource.onmessage = (event) => {
+            sseErrorCount = 0;
             if (!event.data) return;
             try {
                 const data = JSON.parse(event.data);
@@ -1521,6 +1552,16 @@ ${bodyContent}
                 }
                 return;
             }
+
+            console.warn(`SSE connection issue (attempt ${sseErrorCount + 1}/${MAX_SSE_ERRORS})`);
+            sseErrorCount++;
+
+            if (sseErrorCount < MAX_SSE_ERRORS) {
+                statStatus.textContent = 'Đang kết nối lại…';
+                statStatus.style.color = 'var(--fpt-orange)';
+                return;
+            }
+
             console.error('SSE EventSource error:', err);
             clearInterval(timerInterval);
             statStatus.textContent = 'Lỗi Kết Nối';
@@ -1540,6 +1581,7 @@ ${bodyContent}
                 logDiv.style.borderRadius = '4px';
                 logDiv.innerHTML = `<span style="font-weight:bold;"><i class="fa-solid fa-circle-exclamation"></i> [LỖI KẾT NỐI MÁY CHỦ]</span> Không thể kết nối tới API tại <strong>${getApiPrefix()}</strong>.<br><br>` +
                                    `<strong>Hướng dẫn khắc phục sự cố:</strong><br>` +
+                                   `• <strong>Máy chủ đang khởi động (Render free tier):</strong> Vui lòng chờ 30-50 giây để máy chủ thức dậy sau thời gian ngủ đông.<br>` +
                                    `• <strong>Đối với máy chủ cục bộ:</strong> Đảm bảo backend đang hoạt động (nhấp đúp tệp <strong>server.exe</strong> hoặc chạy lệnh <strong>python main.py --server</strong>) và lắng nghe trên cổng 8000.<br>` +
                                    `• <strong>Đối với máy chủ VPS/Từ xa:</strong> Kiểm tra lại địa chỉ cấu hình máy chủ trong bảng Cài đặt (nhấp biểu tượng <strong>bánh răng</strong> ở góc trên bên phải bảng yêu cầu) và đảm bảo máy chủ VPS của bạn đã bật CORS cho phép origin Vercel.<br>` +
                                    `• <strong>Vấn đề HTTPS / Mixed Content:</strong> Nếu truy cập Vercel qua HTTPS, trình duyệt sẽ chặn kết nối HTTP không bảo mật (Mixed Content). Hãy sử dụng địa chỉ HTTPS (qua VPS bảo mật, ngrok, hoặc localtunnel) để kết nối thành công.`;
@@ -1559,6 +1601,31 @@ ${bodyContent}
         if (!content) {
             reportView.innerHTML = '';
             return;
+        }
+
+        let processed = content;
+        
+        // Parse Guardrail JSON into clean human-readable text
+        let cleanText = content.trim();
+        if (cleanText.startsWith('{') || cleanText.includes('"relevant"')) {
+            try {
+                let jsonStr = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();
+                const parsed = JSON.parse(jsonStr);
+                if (parsed.reason) {
+                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cầu hợp lệ.\n* **Lý do**: ${parsed.reason}\n\n*Đang chuyển tiếp yêu cầu đến các Tác nhân Nghiên cứu...*`;
+                } else if (parsed.relevant === true) {
+                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cầu hợp lệ.\n\n*Đang chuyển tiếp yêu cầu đến các Tác nhân Nghiên cứu...*`;
+                }
+            } catch (e) {
+                const match = cleanText.match(/"reason"\s*:\s*"([^"]*)/);
+                if (match) {
+                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cảnh hợp lệ.\n* **Lý do**: ${match[1]}\n\n*Đang chuyển tiếp yêu cầu đến các Tác nhân Nghiên cứu...*`;
+                } else {
+                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cầu hợp lệ.\n\n*Đang chuyển tiếp yêu cầu đến các Tác nhân Nghiên cứu...*`;
+                }
+            }
+        } else {
+            processed = cleanReportContent(processed);
         }
 
         // Protect math blocks from marked.js escaping
@@ -1605,30 +1672,41 @@ ${bodyContent}
     function displayReportData(data) {
         if (!data || !data.report) return;
 
-        let reportText = data.report;
+        let rawReport = data.report;
         let diagramText = data.diagram || '';
         let explanationText = data.explanation || '';
 
+        // Extract diagram if diagramText is empty and rawReport has a mermaid block
+        if (!diagramText && rawReport.includes('```mermaid')) {
+            const regex = /```mermaid\s*([\s\S]*?)\s*```/i;
+            const match = rawReport.match(regex);
+            if (match) {
+                diagramText = match[1].trim();
+            }
+        }
+
+        // Clean report content from any mermaid or leaked markers
+        let reportText = cleanReportContent(rawReport);
+
         // Robust Fallback Parser if standard section markers are missing
-        const hasMarkers = reportText.includes('=== DETAILED REPORT ===') || 
-                           reportText.includes('=== CONSOLE MESSAGE ===') || 
-                           reportText.includes('=== THINKING ===');
+        const hasMarkers = rawReport.includes('=== DETAILED REPORT ===') || 
+                           rawReport.includes('=== CONSOLE MESSAGE ===') || 
+                           rawReport.includes('=== THINKING ===');
 
         if (!hasMarkers) {
-            if (reportText.includes('```mermaid')) {
+            if (rawReport.includes('```mermaid')) {
                 const regex = /```mermaid\s*([\s\S]*?)\s*```/i;
-                const match = reportText.match(regex);
+                const match = rawReport.match(regex);
                 if (match) {
-                    diagramText = match[1].trim();
-                    const idx = reportText.indexOf('```mermaid');
-                    const beforeDiagram = reportText.substring(0, idx).trim();
-                    const endIdx = reportText.indexOf('```', idx + 10);
+                    const idx = rawReport.indexOf('```mermaid');
+                    const beforeDiagram = rawReport.substring(0, idx).trim();
+                    const endIdx = rawReport.indexOf('```', idx + 10);
                     let afterDiagram = '';
                     if (endIdx !== -1) {
-                        afterDiagram = reportText.substring(endIdx + 3).trim();
+                        afterDiagram = rawReport.substring(endIdx + 3).trim();
                     }
-                    reportText = beforeDiagram;
-                    explanationText = afterDiagram;
+                    reportText = cleanReportContent(beforeDiagram);
+                    explanationText = cleanReportContent(afterDiagram);
                 }
             }
             
@@ -2069,6 +2147,7 @@ ${bodyContent}
                 consoleOutput.scrollTop = consoleOutput.scrollHeight;
 
                 hasCompletedSuccessfully = false;
+                sseErrorCount = 0;
                 if (eventSource) {
                     eventSource.close();
                     eventSource = null;
@@ -2077,6 +2156,7 @@ ${bodyContent}
                 eventSource = new EventSource(getApiPrefix() + `/api/run?topic=${encodeURIComponent(activeSearch.topic)}`);
 
                 eventSource.onmessage = (event) => {
+                    sseErrorCount = 0;
                     if (!event.data) return;
                     try {
                         const data = JSON.parse(event.data);
@@ -2102,6 +2182,16 @@ ${bodyContent}
                         }
                         return;
                     }
+
+                    console.warn(`SSE reconnect issue (attempt ${sseErrorCount + 1}/${MAX_SSE_ERRORS})`);
+                    sseErrorCount++;
+
+                    if (sseErrorCount < MAX_SSE_ERRORS) {
+                        statStatus.textContent = 'Đang kết nối lại…';
+                        statStatus.style.color = 'var(--fpt-orange)';
+                        return;
+                    }
+
                     console.error('SSE EventSource error:', err);
                     clearInterval(timerInterval);
                     statStatus.textContent = 'Lỗi Kết Nối';
@@ -2121,6 +2211,7 @@ ${bodyContent}
                         logDiv.style.borderRadius = '4px';
                         logDiv.innerHTML = `<span style="font-weight:bold;"><i class="fa-solid fa-circle-exclamation"></i> [LỖI KẾT NỐI MÁY CHỦ]</span> Không thể kết nối tới API tại <strong>${getApiPrefix()}</strong>.<br><br>` +
                                            `<strong>Hướng dẫn khắc phục sự cố:</strong><br>` +
+                                           `• <strong>Máy chủ đang khởi động (Render free tier):</strong> Vui lòng chờ 30-50 giây để máy chủ thức dậy sau thời gian ngủ đông.<br>` +
                                            `• <strong>Đối với máy chủ cục bộ:</strong> Đảm bảo backend đang hoạt động (nhấp đúp tệp <strong>server.exe</strong> hoặc chạy lệnh <strong>python main.py --server</strong>) và lắng nghe trên cổng 8000.<br>` +
                                            `• <strong>Đối với máy chủ VPS/Từ xa:</strong> Kiểm tra lại địa chỉ cấu hình máy chủ trong bảng Cài đặt (nhấp biểu tượng <strong>bánh răng</strong> ở góc trên bên phải bảng yêu cầu) và đảm bảo máy chủ VPS của bạn đã bật CORS cho phép origin Vercel.<br>` +
                                            `• <strong>Vấn đề HTTPS / Mixed Content:</strong> Nếu truy cập Vercel qua HTTPS, trình duyệt sẽ chặn kết nối HTTP không bảo mật (Mixed Content). Hãy sử dụng địa chỉ HTTPS (qua VPS bảo mật, ngrok, hoặc localtunnel) để kết nối thành công.`;
