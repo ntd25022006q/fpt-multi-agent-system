@@ -227,13 +227,8 @@ def get_rag_context(topic: str, query_type: str = "consulting") -> tuple[str, li
     # Merge context into a single string
     formatted_context = ""
     for idx, doc in enumerate(unique_docs, start=1):
-        source_path = doc.metadata.get("source", "unknown_source.md")
-        try:
-            rel_path = os.path.relpath(source_path, RAW_DATA_DIR).replace("\\", "/")
-        except Exception:
-            rel_path = os.path.basename(source_path)
-        formatted_context += f"\n--- [Document {idx}: {rel_path}] ---\n{doc.page_content}\n"
+        formatted_context += f"\n--- [Tài liệu {idx}] ---\n{doc.page_content}\n"
         
-    console.print(f"   ✅ Retrieved {len(unique_docs)} chunks from {len(citations)} source documents: {citations}")
+    console.print(f"   ✅ Retrieved {len(unique_docs)} chunks from {len(citations)} source documents.")
     
     return formatted_context.strip(), citations
