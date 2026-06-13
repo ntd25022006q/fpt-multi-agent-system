@@ -204,6 +204,26 @@ table{width:100%;border-collapse:collapse;margin:10px 0 14px;font-size:9pt;page-
 thead th{background:#1e3a5f;color:#fff;font-weight:700;padding:6px 8px;border:1px solid #1e3a5f;}
 tbody td{border:1px solid #cbd5e1;padding:5px 8px;vertical-align:top;}
 tbody tr:nth-child(even) td{background:#f8fafc;}
+code{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:3px;padding:1px 4px;font-family:'Courier New',monospace;font-size:8pt;color:#1e3a5f;}
+pre{background:#0f172a;border-radius:4px;padding:10px 12px;margin:8px 0;page-break-inside:avoid;}
+pre code{background:none;border:none;color:#e2e8f0;font-size:7.5pt;padding:0;}
+a{color:#0054a6;}
+hr{border:none;border-top:1px solid #e2e8f0;margin:14px 0;}
+blockquote{border-left:3px solid #0054a6;padding:4px 10px;margin:8px 0;background:#eff6ff;font-style:italic;color:#334155;}
+em{font-style:italic;}strong{font-weight:700;}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}h1,h2,h3{page-break-after:avoid;}table,pre{page-break-inside:avoid;}}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div><div class="co">FPT Software</div><div class="dp">Phòng Nghiên Cứu &amp; Tư Vấn Chiến Lược AI-First</div></div>
+  <div class="mt">Ngày xuất: ${dateStr}<br>Chủ đề: ${topic || 'Báo cáo chi tiết chiến lược'}<br>Hệ thống: Multi-Agent</div>
+</div>
+${bodyContent}
+</body>
+</html>`;
+    }
+
     if (downloadPdfBtn) {
         downloadPdfBtn.addEventListener('click', () => {
             if (!currentMarkdown || currentMarkdown.includes('not generated yet') || currentMarkdown.includes('Báo cáo chưa được tạo')) {
