@@ -25,13 +25,13 @@ You MUST respond using the following structured format (use the exact markers):
 [Write a clean, professional, plain-text summary of your strategic recommendations, phase roadmap, and metrics. Do NOT use any markdown characters like asterisks, bullet points, or hashtags. Keep it as friendly plain text paragraphs.]
 
 === DETAILED REPORT ===
-Strategic Recommendations & Roadmap:
-Provide a structured, multi-phase roadmap (e.g. Phase 1, Phase 2, Phase 3) containing action items that are highly specific to this topic as plain text.
+### 1. Khuyến nghị Chiến lược & Lộ trình thực hiện (Strategic Recommendations & Roadmap)
+[Cung cấp lộ trình triển khai chi tiết nhiều giai đoạn (ví dụ: Giai đoạn 1, Giai đoạn 2, Giai đoạn 3) kèm theo các hành động cụ thể đặc thù cho chủ đề này dưới dạng danh sách Markdown.]
 
-Performance & Success KPIs:
-[Provide a list of success metrics, target KPIs, measurement frequencies, and owners. Do NOT use markdown tables (no pipes |, dashes, or colons for tables). Present this clearly in plain text.]
+### 2. Các Chỉ số KPI Đo lường Hiệu quả (Performance & Success KPIs)
+[Cung cấp danh sách các chỉ số đo lường thành công, KPI mục tiêu, tần suất đo lường và bộ phận chịu trách nhiệm dưới dạng danh sách hoặc bảng Markdown.]
 
-IMPORTANT: You MUST write the DETAILED REPORT entirely as plain text. Do NOT use any markdown formatting (no hashtags like # or ###, no bold asterisks **, no bullet points with - or *, no markdown links).
+IMPORTANT: You MUST write the DETAILED REPORT using standard Markdown formatting (such as ### for section headers, * for bullet lists, and ** for bold text) to make the report look highly professional, clear, and structured.
 """
 
 from langchain_core.runnables import RunnableConfig

@@ -26,21 +26,21 @@ You MUST respond using the following structured format (use the exact markers):
 [Write a clean, professional, plain-text summary of your research progress here. Do NOT use any markdown characters like asterisks, bullet points, or hashtags. Keep it as friendly plain text paragraphs.]
 
 === DETAILED REPORT ===
-Topic Definition & Core Concepts:
-[Explain the topic/question clearly as plain text paragraphs without any markdown headings, asterisks, or formatting.]
+### 1. Định nghĩa & Khái niệm cốt lõi (Topic Definition & Core Concepts)
+[Giải thích chi tiết về chủ đề/câu hỏi rõ ràng sử dụng các đoạn văn Markdown tiêu chuẩn có kèm chữ in đậm **, gạch đầu dòng khi cần thiết.]
 
-Advantages & Disadvantages:
-Pros:
-  [pro 1]
-  [pro 2]
-Cons:
-  [con 1]
-  [con 2]
+### 2. Đánh giá Ưu điểm & Nhược điểm (Advantages & Disadvantages)
+* **Ưu điểm (Pros)**:
+  * [Ưu điểm 1]
+  * [Ưu điểm 2]
+* **Nhược điểm (Cons)**:
+  * [Nhược điểm 1]
+  * [Nhược điểm 2]
 
-Industry Context & Reference Examples:
-[Provide real-world examples as plain text paragraphs, including FPT Software clients, FPT's own research projects (AgileCoder, HyperAgent, CodeWiki, IvyHub, FlezIPT), or global benchmarks. Cite specific data points and metrics where available from the context provided.]
+### 3. Bối cảnh Ngành & Ví dụ thực tế (Industry Context & Reference Examples)
+[Cung cấp ví dụ thực tế sử dụng các danh sách Markdown hoặc bảng biểu chi tiết, bao gồm các dự án nghiên cứu của FPT Software như AgileCoder, HyperAgent, CodeWiki...]
 
-IMPORTANT: You MUST write the DETAILED REPORT entirely as plain text. Do NOT use any markdown formatting (no hashtags like # or ###, no bold asterisks **, no bullet points with - or *, no markdown links).
+IMPORTANT: You MUST write the DETAILED REPORT using standard Markdown formatting (such as ### for section headers, * for bullet lists, and ** for bold text) to make the report look highly professional, clear, and structured.
 """
 
 def generate_demo_csv(topic: str) -> str:
