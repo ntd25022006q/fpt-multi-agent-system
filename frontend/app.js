@@ -1309,17 +1309,31 @@ ${bodyContent}
                 activeStream.rawText += data.token;
                 const rawText = activeStream.rawText;
                 
-                // Track transitions between THINKING, CONSOLE MESSAGE, DETAILED REPORT, MERMAID DIAGRAM and DIAGRAM EXPLANATION sections
-                if (rawText.includes('=== THINKING ===') && activeStream.section === 'none') {
+                // Track transitions between THINKING, CONSOLE MESSAGE, DETAILED REPORT, MERMAID DIAGRAM and DIAGRAM EXPLANATION sections (both English and Vietnamese)
+                const hasThinkingMarker = rawText.includes('=== THINKING ===') || 
+                                          rawText.includes('=== QUÁ TRÌNH TƯ DUY ===') || 
+                                          rawText.includes('=== SUY NGHĨ ===') || 
+                                          rawText.includes('=== TƯ DUY ===');
+                if (hasThinkingMarker && activeStream.section === 'none') {
                     activeStream.section = 'thinking';
                     activeStream.thinkingDetailsEl.style.display = 'block';
                 }
                 
-                if (rawText.includes('=== CONSOLE MESSAGE ===') && activeStream.section !== 'content' && activeStream.section !== 'report' && activeStream.section !== 'diagram' && activeStream.section !== 'explanation') {
+                const hasConsoleMarker = rawText.includes('=== CONSOLE MESSAGE ===') || 
+                                         rawText.includes('=== THÔNG BÁO CONSOLE ===') || 
+                                         rawText.includes('=== NHẬT KÝ CONSOLE ===') || 
+                                         rawText.includes('=== TÓM TẮT CONSOLE ===') || 
+                                         rawText.includes('=== NHẬT KÝ ===') || 
+                                         rawText.includes('=== TÓM TẮT ===');
+                if (hasConsoleMarker && activeStream.section !== 'content' && activeStream.section !== 'report' && activeStream.section !== 'diagram' && activeStream.section !== 'explanation') {
                     activeStream.section = 'content';
                 }
 
-                if (rawText.includes('=== DETAILED REPORT ===') && activeStream.section !== 'report' && activeStream.section !== 'diagram' && activeStream.section !== 'explanation') {
+                const hasReportMarker = rawText.includes('=== DETAILED REPORT ===') || 
+                                        rawText.includes('=== BÁO CÁO CHI TIẾT ===') || 
+                                        rawText.includes('=== BÁO CÁO CỤ THỂ ===') || 
+                                        rawText.includes('=== BÁO CÁO ===');
+                if (hasReportMarker && activeStream.section !== 'report' && activeStream.section !== 'diagram' && activeStream.section !== 'explanation') {
                     activeStream.section = 'report';
                     // Programmatically switch to the Report tab when report starts streaming!
                     const reportTabBtn = document.getElementById('tab-btn-report');
@@ -1343,39 +1357,83 @@ ${bodyContent}
                 
                 if (activeStream.section === 'thinking') {
                     if (activeStream.thinkingContentEl.textContent === '') {
-                        const idx = rawText.indexOf('=== THINKING ===');
+                        let idx = -1;
+                        let offset = 16;
+                        const markers = [
+                            { key: '=== THINKING ===', len: 16 },
+                            { key: '=== QUÁ TRÌNH TƯ DUY ===', len: 24 },
+                            { key: '=== SUY NGHĨ ===', len: 16 },
+                            { key: '=== TƯ DUY ===', len: 14 }
+                        ];
+                        for (const m of markers) {
+                            const found = rawText.indexOf(m.key);
+                            if (found !== -1 && (idx === -1 || found < idx)) {
+                                idx = found;
+                                offset = m.len;
+                            }
+                        }
                         if (idx !== -1) {
-                            const after = rawText.substring(idx + 16);
+                            const after = rawText.substring(idx + offset);
                             activeStream.thinkingText = after;
                             activeStream.thinkingContentEl.textContent = cleanInternalFilenames(stripMarkdown(after));
                             consoleOutput.scrollTop = consoleOutput.scrollHeight;
                             return;
                         }
                     }
-                    if (!data.token.includes('===') && !data.token.includes('CONSOLE')) {
+                    if (!data.token.includes('===') && !data.token.includes('CONSOLE') && !data.token.includes('THÔNG BÁO') && !data.token.includes('NHẬT KÝ') && !data.token.includes('TÓM TẮT')) {
                         activeStream.thinkingText += data.token;
                         activeStream.thinkingContentEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.thinkingText));
                     }
                 } else if (activeStream.section === 'content') {
                     if (activeStream.logBodyEl.textContent === '') {
-                        const idx = rawText.indexOf('=== CONSOLE MESSAGE ===');
+                        let idx = -1;
+                        let offset = 23;
+                        const markers = [
+                            { key: '=== CONSOLE MESSAGE ===', len: 23 },
+                            { key: '=== THÔNG BÁO CONSOLE ===', len: 25 },
+                            { key: '=== NHẬT KÝ CONSOLE ===', len: 23 },
+                            { key: '=== TÓM TẮT CONSOLE ===', len: 23 },
+                            { key: '=== NHẬT KÝ ===', len: 15 },
+                            { key: '=== TÓM TẮT ===', len: 15 }
+                        ];
+                        for (const m of markers) {
+                            const found = rawText.indexOf(m.key);
+                            if (found !== -1 && (idx === -1 || found < idx)) {
+                                idx = found;
+                                offset = m.len;
+                            }
+                        }
                         if (idx !== -1) {
-                            const after = rawText.substring(idx + 23);
+                            const after = rawText.substring(idx + offset);
                             activeStream.contentText = after;
                             activeStream.logBodyEl.textContent = cleanInternalFilenames(stripMarkdown(after));
                             consoleOutput.scrollTop = consoleOutput.scrollHeight;
                             return;
                         }
                     }
-                    if (!data.token.includes('===') && !data.token.includes('DETAILED')) {
+                    if (!data.token.includes('===') && !data.token.includes('DETAILED') && !data.token.includes('BÁO CÁO')) {
                         activeStream.contentText += data.token;
                         activeStream.logBodyEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.contentText));
                     }
                 } else if (activeStream.section === 'report') {
                     if (!activeStream.reportText) {
-                        const idx = rawText.indexOf('=== DETAILED REPORT ===');
+                        let idx = -1;
+                        let offset = 23;
+                        const markers = [
+                            { key: '=== DETAILED REPORT ===', len: 23 },
+                            { key: '=== BÁO CÁO CHI TIẾT ===', len: 24 },
+                            { key: '=== BÁO CÁO CỤ THỂ ===', len: 22 },
+                            { key: '=== BÁO CÁO ===', len: 15 }
+                        ];
+                        for (const m of markers) {
+                            const found = rawText.indexOf(m.key);
+                            if (found !== -1 && (idx === -1 || found < idx)) {
+                                idx = found;
+                                offset = m.len;
+                            }
+                        }
                         if (idx !== -1) {
-                            const after = rawText.substring(idx + 23);
+                            const after = rawText.substring(idx + offset);
                             activeStream.reportText = after;
                         } else {
                             activeStream.reportText = '';
@@ -1692,8 +1750,19 @@ ${bodyContent}
 
         // Robust Fallback Parser if standard section markers are missing
         const hasMarkers = rawReport.includes('=== DETAILED REPORT ===') || 
+                           rawReport.includes('=== BÁO CÁO CHI TIẾT ===') ||
+                           rawReport.includes('=== BÁO CÁO CỤ THỂ ===') ||
+                           rawReport.includes('=== BÁO CÁO ===') ||
                            rawReport.includes('=== CONSOLE MESSAGE ===') || 
-                           rawReport.includes('=== THINKING ===');
+                           rawReport.includes('=== THÔNG BÁO CONSOLE ===') ||
+                           rawReport.includes('=== NHẬT KÝ CONSOLE ===') ||
+                           rawReport.includes('=== TÓM TẮT CONSOLE ===') ||
+                           rawReport.includes('=== NHẬT KÝ ===') ||
+                           rawReport.includes('=== TÓM TẮT ===') ||
+                           rawReport.includes('=== THINKING ===') ||
+                           rawReport.includes('=== SUY NGHĨ ===') ||
+                           rawReport.includes('=== QUÁ TRÌNH TƯ DUY ===') ||
+                           rawReport.includes('=== TƯ DUY ===');
 
         if (!hasMarkers) {
             if (rawReport.includes('```mermaid')) {
