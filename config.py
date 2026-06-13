@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(override=True)
 
 # Disable ChromaDB telemetry to prevent console log clutter
 os.environ["ANON_TELEMETRY"] = "False"
