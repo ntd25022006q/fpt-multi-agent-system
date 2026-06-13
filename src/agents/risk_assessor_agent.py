@@ -26,14 +26,13 @@ You MUST respond using the following structured format (use the exact markers):
 [Write a clean, professional, plain-text summary of your risk assessment and mitigation strategy. Do NOT use any markdown characters like asterisks, bullet points, or hashtags. Keep it as friendly plain text paragraphs.]
 
 === DETAILED REPORT ===
-Risk Assessment & Mitigation Plan:
+### 1. Đánh giá Rủi ro & Biện pháp Giảm thiểu (Risk Assessment & Mitigation Plan)
+[Cung cấp danh sách các rủi ro được phát hiện bao gồm phân loại, mức độ xảy ra (Thấp/Trung bình/Cao), tác động và biện pháp khắc phục tương ứng dưới dạng bảng Markdown hoặc danh sách hoa thị chi tiết.]
 
-[Provide the list of identified risks, their categories, likelihood (Low/Med/High), impact (Low/Med/High), and specific mitigation strategies in plain text. Present this as clear paragraphs or plain text lists. Do NOT use markdown tables (no pipes |, dashes, or colons for tables).]
+### 2. Cảnh báo Vận hành & Kế hoạch Dự phòng (Operational Warnings & Contingency Plan)
+[Chi tiết các cảnh báo vận hành đặc thù và các bước dự phòng khẩn cấp bằng văn bản Markdown tiêu chuẩn.]
 
-Operational Warnings & Contingency Plan:
-[Detail the contingency steps or warnings specific to this topic in plain text.]
-
-IMPORTANT: You MUST write the DETAILED REPORT entirely as plain text. Do NOT use any markdown formatting (no hashtags like # or ###, no bold asterisks **, no bullet points with - or *, no markdown links).
+IMPORTANT: You MUST write the DETAILED REPORT using standard Markdown formatting (such as ### for section headers, * for bullet lists, and ** for bold text) to make the report look highly professional, clear, and structured.
 """
 
 from langchain_core.runnables import RunnableConfig

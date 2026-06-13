@@ -240,9 +240,12 @@ ${bodyContent}
 
             const tempDiv = document.createElement('div');
             tempDiv.className = 'academic-pdf-export';
-            tempDiv.style.position = 'absolute';
-            tempDiv.style.left = '-9999px';
-            tempDiv.style.top = '-9999px';
+            tempDiv.style.position = 'fixed';
+            tempDiv.style.left = '0';
+            tempDiv.style.top = '0';
+            tempDiv.style.zIndex = '-9999';
+            tempDiv.style.opacity = '1';
+            tempDiv.style.pointerEvents = 'none';
             tempDiv.style.width = '720px'; // 720px width yields perfect page aspect ratio for A4
             document.body.appendChild(tempDiv);
 
@@ -257,7 +260,7 @@ ${bodyContent}
                 let uploadHTML = '';
                 if (uploadedDiagramDataUrl) {
                     uploadHTML = `
-                    <h2>SƠ ĐỒ KIẾN TRÚC HỆ THỐNG (ẢNH TẢI LÊN)</h2>
+                    <h2>SƠ ĐỒ QUY TRÌNH HỆ THỐNG (ẢNH TẢI LÊN)</h2>
                     <div class="pdf-mermaid-svg" style="text-align: center;">
                         <img src="${uploadedDiagramDataUrl}" style="max-width: 100%; max-height: 400px; border-radius: 6px; display: inline-block;">
                     </div>`;
@@ -293,7 +296,7 @@ ${bodyContent}
                     
                     const svgHtml = clonedSvg.outerHTML;
                     diagramHTML = `
-                    <h2>SƠ ĐỒ LUỒNG KIẾN TRÚC HỆ THỐNG</h2>
+                    <h2>SƠ ĐỒ LUỒNG QUY TRÌNH HỆ THỐNG</h2>
                     <div class="pdf-mermaid-svg">
                         ${svgHtml}
                     </div>`;
@@ -390,7 +393,7 @@ ${bodyContent}
             if (uploadedDiagramDataUrl) {
                 const a = document.createElement('a');
                 a.href = uploadedDiagramDataUrl;
-                a.download = `FPT_SoDo_KienTruc_${new Date().toISOString().slice(0,10)}.png`;
+                a.download = `FPT_SoDo_QuyTrinh_${new Date().toISOString().slice(0,10)}.png`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -449,7 +452,7 @@ ${bodyContent}
                         const fallbackUrl = URL.createObjectURL(fallbackBlob);
                         const a = document.createElement('a');
                         a.href     = fallbackUrl;
-                        a.download = `FPT_SoDo_QuiTrinh_${new Date().toISOString().slice(0,10)}.svg`;
+                        a.download = `FPT_SoDo_QuyTrinh_${new Date().toISOString().slice(0,10)}.svg`;
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);
@@ -484,7 +487,7 @@ ${bodyContent}
                                 const pngUrl = URL.createObjectURL(blob);
                                 const a = document.createElement('a');
                                 a.href     = pngUrl;
-                                a.download = `FPT_SoDo_QuiTrinh_${new Date().toISOString().slice(0,10)}.png`;
+                                a.download = `FPT_SoDo_QuyTrinh_${new Date().toISOString().slice(0,10)}.png`;
                                 document.body.appendChild(a);
                                 a.click();
                                 document.body.removeChild(a);
@@ -1409,7 +1412,7 @@ ${bodyContent}
                         const cleanedDiagramText = activeStream.diagramText.replace(/={2,}/g, '').trim();
                         const outputContainer = document.getElementById('mermaid-render-output');
                         if (outputContainer && cleanedDiagramText) {
-                            outputContainer.innerHTML = `<div style="padding:20px; font-family: 'Fira Code', monospace; font-size:11px; white-space:pre-wrap; text-align:left; color:#475569; width: 100%; height: 100%; box-sizing: border-box;"><div style="color:var(--fpt-blue); font-weight:700; margin-bottom:8px;"><i class="fa-solid fa-spinner fa-spin"></i> ĐANG VẼ SƠ ĐỒ KIẾN TRÚC...</div><code style="display:block; background:#f8fafc; padding:12px; border-radius:6px; border:1px solid #e2e8f0; overflow-x:auto;">${cleanedDiagramText}</code></div>`;
+                            outputContainer.innerHTML = `<div style="padding:20px; font-family: 'Fira Code', monospace; font-size:11px; white-space:pre-wrap; text-align:left; color:#475569; width: 100%; height: 100%; box-sizing: border-box;"><div style="color:var(--fpt-blue); font-weight:700; margin-bottom:8px;"><i class="fa-solid fa-spinner fa-spin"></i> ĐANG VẼ SƠ ĐỒ QUY TRÌNH...</div><code style="display:block; background:#f8fafc; padding:12px; border-radius:6px; border:1px solid #e2e8f0; overflow-x:auto;">${cleanedDiagramText}</code></div>`;
                         }
                     }
                 } else if (activeStream.section === 'explanation') {
@@ -1906,7 +1909,7 @@ ${bodyContent}
                     // Add system log entry
                     const log = document.createElement('div');
                     log.className = 'console-log';
-                    log.innerHTML = `<span style="color: var(--accent-recommender); font-weight: bold;">[Hệ Thống]</span> Đã nhận diện hình ảnh sơ đồ kiến trúc: <strong>${fileName}</strong>.`;
+                    log.innerHTML = `<span style="color: var(--accent-recommender); font-weight: bold;">[Hệ Thống]</span> Đã nhận diện hình ảnh sơ đồ quy trình: <strong>${fileName}</strong>.`;
                     consoleOutput.appendChild(log);
                     consoleOutput.scrollTop = consoleOutput.scrollHeight;
                 };

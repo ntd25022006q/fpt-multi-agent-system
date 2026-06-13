@@ -26,15 +26,14 @@ You MUST respond using the following structured format (use the exact markers):
 [Write a clean, professional, plain-text summary of your comparative analysis. Do NOT use any markdown characters like asterisks, bullet points, or hashtags. Keep it as friendly plain text paragraphs.]
 
 === DETAILED REPORT ===
-Comparative Analysis & Options Evaluation:
+### 1. Phân tích So sánh & Đánh giá các Phương án (Comparative Analysis & Options Evaluation)
+[Cung cấp đánh giá so sánh chi tiết về các giải pháp được xác định sử dụng bảng Markdown hoặc danh sách hoa thị rõ ràng để trực quan các tiêu chí so sánh.]
 
-[Provide a comparative evaluation of the identified options using plain text lists or structured text spacing. Do NOT use markdown tables (no pipes like |, dashes, or colons for tables). Present the criteria and values clearly in plain text.]
+### 2. Các Phát hiện Cấu trúc Cơ bản (Key Structural Findings)
+* **Đánh đổi cốt lõi (Crucial Trade-off)**: [Chi tiết sự đánh đổi kỹ thuật quan trọng]
+* **Sự phù hợp vận hành (Operational Fit)**: [Phân tích điều kiện phù hợp của từng giải pháp]
 
-Key Structural Findings:
-Crucial Trade-off: [Detail the major tradeoff relevant to this specific comparison]
-Operational Fit: [Analyze under what conditions each option is suitable]
-
-IMPORTANT: You MUST write the DETAILED REPORT entirely as plain text. Do NOT use any markdown formatting (no hashtags like # or ###, no bold asterisks **, no bullet points with - or *, no markdown links).
+IMPORTANT: You MUST write the DETAILED REPORT using standard Markdown formatting (such as ### for section headers, * for bullet lists, and ** for bold text, and markdown tables if helpful) to make the report look highly professional, clear, and structured.
 """
 
 from langchain_core.runnables import RunnableConfig

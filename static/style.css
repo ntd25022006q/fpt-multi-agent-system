@@ -800,74 +800,72 @@ body {
 
 /* ── Markdown Report ──────────────────────────────────── */
 .markdown-report {
-    line-height: 1.82;
-    color: #000000;
-    font-family: 'Times New Roman', Times, Baskerville, Georgia, serif;
+    line-height: 1.75;
+    color: #1e293b;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     padding: 40px 50px;
     background: #ffffff;
-    border: 1px solid #d1d5db; /* Clean academic border */
-    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
     margin: 15px 0;
     max-width: 100%;
     width: 100%;
     box-sizing: border-box;
-    text-align: justify;
     position: relative;
 }
 .markdown-report h1 {
-    font-size: 20px;
+    font-size: 22px;
     margin-bottom: 24px;
-    font-weight: bold;
+    font-weight: 800;
     text-transform: uppercase;
     text-align: center;
-    color: #000000;
+    color: #f97316;
 }
 .markdown-report h2 {
-    font-size: 16px;
+    font-size: 18px;
     margin-top: 32px;
-    margin-bottom: 14px;
-    font-weight: bold;
-    color: #000000;
-    border-bottom: 1.5px solid #000000;
-    padding-bottom: 4px;
-    text-transform: uppercase;
+    margin-bottom: 16px;
+    font-weight: 700;
+    color: #f97316;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 6px;
 }
 .markdown-report h3 {
-    font-size: 14px;
+    font-size: 15px;
     margin-top: 22px;
-    margin-bottom: 10px;
-    font-weight: bold;
-    color: #000000;
+    margin-bottom: 12px;
+    font-weight: 600;
+    color: #ea580c;
 }
 .markdown-report p  {
     margin-bottom: 14px;
-    font-size: 13.5px;
-    color: #000000;
-    text-align: justify;
-    line-height: 1.75;
+    font-size: 14.2px;
+    color: #0f172a; /* Cực kỳ rõ nét, không bị mờ */
+    line-height: 1.7;
 }
 .markdown-report blockquote {
-    border-left: 3px solid #4b5563;
+    border-left: 4px solid #f97316;
     padding: 8px 16px;
     margin: 16px 24px;
-    color: #1f2937;
+    color: #1e293b; /* Rõ nét hơn */
     font-style: italic;
-    background: transparent;
+    background: #fff7ed;
+    border-radius: 0 8px 8px 0;
 }
 .markdown-report b, .markdown-report strong {
-    color: #000000;
+    color: #000000; /* Đen hẳn để in đậm nổi bật */
     font-weight: 700;
 }
 .markdown-report ul, .markdown-report ol {
     margin-left: 24px;
     margin-bottom: 14px;
-    font-size: 13.5px;
-    color: #000000;
+    font-size: 14.2px;
+    color: #0f172a; /* Cực kỳ rõ nét */
 }
 .markdown-report li {
-    margin-bottom: 6px;
-    line-height: 1.7;
+    margin-bottom: 8px;
+    line-height: 1.6;
 }
 .markdown-report ul ul, .markdown-report ol ul {
     margin-left: 20px;
@@ -876,8 +874,8 @@ body {
     list-style-type: circle;
 }
 .markdown-report ul ul li, .markdown-report ol ul li {
-    font-size: 12.5px;
-    color: #374151;
+    font-size: 13.5px;
+    color: #1e293b; /* Rõ nét hơn */
 }
 
 .markdown-report table {
@@ -1096,9 +1094,9 @@ body {
 
 /* ── Academic PDF Export styles (used by html2pdf) ── */
 .academic-pdf-export {
-    font-family: 'Times New Roman', Times, Baskerville, Georgia, serif;
-    color: #000000;
-    background: #ffffff;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: #ea580c; /* Cam đậm FPT */
+    background: #ffffff; /* Nền trắng */
     line-height: 1.62;
     font-size: 11pt;
     text-align: justify;
@@ -1106,7 +1104,7 @@ body {
 }
 
 .academic-pdf-export .pdf-header {
-    border-bottom: 2px solid #000000;
+    border-bottom: 2px solid #f97316;
     padding-bottom: 12px;
     margin-bottom: 30px;
     display: flex;
@@ -1118,13 +1116,13 @@ body {
     font-size: 16pt;
     font-weight: bold;
     text-transform: uppercase;
-    color: #000000;
+    color: #f97316;
 }
 
 .academic-pdf-export .pdf-header-meta {
     text-align: right;
     font-size: 9.5pt;
-    color: #4b5563;
+    color: #ea580c;
 }
 
 .academic-pdf-export h1.pdf-title {
@@ -1134,6 +1132,7 @@ body {
     margin-top: 15px;
     margin-bottom: 30px;
     text-transform: uppercase;
+    color: #f97316;
 }
 
 .academic-pdf-export > h2 {
@@ -1141,7 +1140,8 @@ body {
     font-weight: bold;
     margin-top: 25px;
     margin-bottom: 12px;
-    border-bottom: 1px solid #000000;
+    border-bottom: 1px solid #f97316;
+    color: #f97316;
     padding-bottom: 3px;
     page-break-before: always;
     page-break-after: avoid;
@@ -1150,6 +1150,7 @@ body {
 .academic-pdf-export h3 {
     font-size: 12pt;
     font-weight: bold;
+    color: #ea580c;
     margin-top: 18px;
     margin-bottom: 8px;
     page-break-after: avoid;
@@ -1158,6 +1159,7 @@ body {
 .academic-pdf-export p {
     margin: 0 0 12px;
     text-indent: 24px;
+    color: #ea580c;
 }
 
 .academic-pdf-export p.no-indent, 
@@ -1170,10 +1172,12 @@ body {
 .academic-pdf-export ul, .academic-pdf-export ol {
     margin: 0 0 12px 24px;
     padding: 0;
+    color: #ea580c;
 }
 
 .academic-pdf-export li {
     margin-bottom: 4px;
+    color: #ea580c;
 }
 
 .academic-pdf-export table {
@@ -1181,8 +1185,8 @@ body {
     border-collapse: collapse;
     margin: 18px 0;
     page-break-inside: avoid;
-    border-top: 2px solid #000000;
-    border-bottom: 2px solid #000000;
+    border-top: 2px solid #f97316;
+    border-bottom: 2px solid #f97316;
 }
 
 .academic-pdf-export th, .academic-pdf-export td {
@@ -1192,28 +1196,36 @@ body {
 }
 
 .academic-pdf-export th {
-    border-bottom: 1px solid #000000;
+    border-bottom: 1px solid #f97316;
     font-weight: bold;
     background: transparent;
-    color: #000000;
+    color: #f97316;
 }
 
 .academic-pdf-export td {
-    border-bottom: 0.5px solid #e5e7eb;
+    border-bottom: 0.5px solid #ffedd5;
+    color: #ea580c;
+}
+
+.academic-pdf-export strong, .academic-pdf-export b {
+    color: #9a3412; /* Cam đỏ rất đậm và rõ nét */
+    font-weight: bold;
 }
 
 .academic-pdf-export blockquote {
-    border-left: 3px solid #4b5563;
+    border-left: 3px solid #f97316;
     padding: 4px 16px;
     margin: 12px 24px;
     font-style: italic;
-    color: #1f2937;
+    color: #c2410c;
+    background: #fff7ed;
+    border-radius: 0 8px 8px 0;
     page-break-inside: avoid;
 }
 
 .academic-pdf-export pre {
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
+    background: #fff7ed;
+    border: 1px solid #ffedd5;
     padding: 10px;
     border-radius: 4px;
     overflow-x: auto;
@@ -1224,7 +1236,8 @@ body {
 }
 
 .academic-pdf-export code {
-    background: #f3f4f6;
+    background: #fff7ed;
+    color: #c2410c;
     padding: 2px 4px;
     border-radius: 3px;
     font-size: 9pt;
