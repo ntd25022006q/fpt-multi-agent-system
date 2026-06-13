@@ -822,51 +822,6 @@ ${bodyContent}
 
         // Completion marker
         if (item.type === 'completion') {
-            clearInterval(timerInterval);
-            highlightPanel('complete');
-
-            if (item.stats) {
-                statTime.textContent   = formatTimeString(item.stats.time);
-                statTokens.textContent = item.stats.tokens;
-
-                if (item.stats.irrelevant) {
-                    statAgents.textContent = '1 / 6';
-                    statStatus.textContent = 'Bị Từ Chối ❌';
-                    statStatus.style.color = '#ef4444';
-                } else {
-                    // Show correct agent count based on flow (qa=3, consulting=6)
-                    const agentCount = item.stats.agents || 6;
-                    statAgents.textContent = `${agentCount} / ${agentCount === 3 ? 3 : 6}`;
-                    statStatus.textContent = 'Hoàn Thành ✅';
-                    statStatus.style.color = '#16a069';
-                    if (downloadGroup) downloadGroup.style.display = 'flex';
-                }
-
-                // Update each agent badge with model, ms, tok/s, tokens
-                if (item.stats.agent_tokens) {
-                    const agentKeys = ['guardrail', 'researcher', 'analyst', 'risk_assessor', 'recommender', 'reporter'];
-                    agentKeys.forEach(k => {
-                        const badge = document.getElementById(`metrics-${k}`);
-                        if (badge) {
-                            const durVal = item.stats.agent_durations && item.stats.agent_durations[k] ? item.stats.agent_durations[k] : 0;
-                            const durText = `${durVal.toFixed(3)}s`;
-                            const tk = item.stats.agent_tokens[k] ? item.stats.agent_tokens[k].toLocaleString() : '0';
-                            const tps = item.stats.agent_toks_per_sec && item.stats.agent_toks_per_sec[k] ? item.stats.agent_toks_per_sec[k].toFixed(1) : '0.0';
-                            const mdl = item.stats.agent_models && item.stats.agent_models[k] ? item.stats.agent_models[k].split('/').pop() : '';
-                            badge.textContent = mdl ? `${mdl} · ${durText} · ${tps} tk/s · ${tk} tk` : `${durText} · ${tk} tk`;
-                            badge.title = (item.stats.agent_models && item.stats.agent_models[k]) || '';
-                        }
-                    });
-                }
-            }
-
-            runBtn.disabled  = false;
-            runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
-            if (item.report) {
-                displayReportData(item);
-            } else {
-                fetchReport();
-            }
             isPrinting = false;
             return;
         }
@@ -1086,6 +1041,66 @@ ${bodyContent}
         }
 
         if (data.done) {
+            // Render report and update stats immediately in real-time!
+            clearInterval(timerInterval);
+            highlightPanel('complete');
+
+            if (data.stats) {
+                statTime.textContent   = formatTimeString(data.stats.time);
+                statTokens.textContent = data.stats.tokens;
+
+                if (data.stats.irrelevant) {
+                    statAgents.textContent = '1 / 6';
+                    statStatus.textContent = 'Bị Từ Chối ❌';
+                    statStatus.style.color = '#ef4444';
+                } else {
+                    const agentCount = data.stats.agents || 6;
+                    statAgents.textContent = `${agentCount} / ${agentCount === 3 ? 3 : 6}`;
+                    statStatus.textContent = 'Hoàn Thành ✅';
+                    statStatus.style.color = '#16a069';
+                    if (downloadGroup) downloadGroup.style.display = 'flex';
+                }
+
+                // Update metrics badges for all agents in real-time
+                if (data.stats.agent_tokens) {
+                    const agentKeys = ['guardrail', 'researcher', 'analyst', 'risk_assessor', 'recommender', 'reporter'];
+                    agentKeys.forEach(k => {
+                        const badge = document.getElementById(`metrics-${k}`);
+                        if (badge) {
+                            const durVal = data.stats.agent_durations && data.stats.agent_durations[k] ? data.stats.agent_durations[k] : 0;
+                            const durText = `${durVal.toFixed(3)}s`;
+                            const tk = data.stats.agent_tokens[k] ? data.stats.agent_tokens[k].toLocaleString() : '0';
+                            const tps = data.stats.agent_toks_per_sec && data.stats.agent_toks_per_sec[k] ? data.stats.agent_toks_per_sec[k].toFixed(1) : '0.0';
+                            const mdl = data.stats.agent_models && data.stats.agent_models[k] ? data.stats.agent_models[k].split('/').pop() : '';
+                            badge.textContent = mdl ? `${mdl} · ${durText} · ${tps} tk/s · ${tk} tk` : `${durText} · ${tk} tk`;
+                            badge.title = (data.stats.agent_models && data.stats.agent_models[k]) || '';
+                        }
+                    });
+                }
+            }
+
+            runBtn.disabled  = false;
+            runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
+            if (data.report) {
+                displayReportData(data);
+            } else {
+                fetchReport();
+            }
+
+            // Mark all active graph nodes and edges as completed
+            document.querySelectorAll('.graph-node').forEach(n => {
+                if (!n.classList.contains('node-hidden')) {
+                    n.classList.remove('active');
+                    n.classList.add('completed');
+                }
+            });
+            document.querySelectorAll('.graph-edges line').forEach(l => {
+                if (!l.classList.contains('edge-hidden')) {
+                    l.classList.add('active');
+                }
+            });
+
+            // Push completion marker to printQueue to gracefully end typewriter logic in background
             printQueue.push({ 
                 type: 'completion', 
                 stats: data.stats, 
@@ -1100,12 +1115,39 @@ ${bodyContent}
         }
 
         if (data.type === 'node_start') {
+            // Update node visual highlight and badge immediately in real-time!
+            highlightNode(data.node);
+            
             printQueue.push({ type: 'start', node: data.node });
             if (!isPrinting) processQueue();
             saveActiveSearchState('running');
         }
 
         if (data.type === 'node_end' && data.content) {
+            // Update the node's visual completion status and metrics badge immediately in real-time!
+            const nodeEl = document.getElementById(agentMappings[data.node]?.nodeId);
+            if (nodeEl) {
+                nodeEl.classList.add('completed');
+                nodeEl.classList.remove('active');
+            }
+            const edgeId = (data.node === 'reporter' && !hasAnalystRun) ? 'edge-researcher-reporter' : agentMappings[data.node]?.edgeId;
+            if (edgeId) {
+                const edgeEl = document.getElementById(edgeId);
+                if (edgeEl) {
+                    edgeEl.classList.add('active');
+                }
+            }
+            const badge = document.getElementById(`metrics-${data.node}`);
+            if (badge) {
+                const durVal = data.duration ? data.duration : 0;
+                const durText = `${durVal.toFixed(3)}s`;
+                const tk = data.tokens ? data.tokens.toLocaleString() : '0';
+                const tps = data.toks_per_sec ? data.toks_per_sec.toFixed(1) : '0.0';
+                const mdl = data.model ? data.model.split('/').pop() : '';
+                badge.textContent = mdl ? `${mdl} · ${durText} · ${tps} tk/s · ${tk} tk` : `${durText} · ${tk} tk`;
+                badge.title = data.model || '';
+            }
+
             queuePrint(data.node, data.content, data.duration, data.tokens, data.thinking);
             saveActiveSearchState('running');
         }
