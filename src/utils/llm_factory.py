@@ -197,70 +197,71 @@ def parse_agent_json(content: str, fallback_key: str) -> dict:
     console messages, detailed reports, and diagrams."""
     content = content.strip()
     
-    # Delimiters
-    think_marker = "=== THINKING ==="
-    console_marker = "=== CONSOLE MESSAGE ==="
-    report_marker = "=== DETAILED REPORT ==="
-    
+    think_markers = ["=== THINKING ===", "=== QUÁ TRÌNH TƯ DUY ===", "=== SUY NGHĨ ===", "=== TƯ DUY ==="]
+    console_markers = ["=== CONSOLE MESSAGE ===", "=== THÔNG BÁO CONSOLE ===", "=== NHẬT KÝ CONSOLE ===", "=== TÓM TẮT CONSOLE ===", "=== NHẬT KÝ ===", "=== TÓM TẮT ==="]
+    report_markers = ["=== DETAILED REPORT ===", "=== BÁO CÁO CHI TIẾT ===", "=== BÁO CÁO CỤ THỂ ===", "=== BÁO CÁO ==="]
     mermaid_markers = ["=== MERMAID DIAGRAM ===", "=== SƠ ĐỒ MERMAID ===", "=== BIỂU ĐỒ MERMAID ==="]
     explanation_markers = ["=== DIAGRAM EXPLANATION ===", "=== GIẢI THÍCH CHI TIẾT SƠ ĐỒ ===", "=== GIẢI THÍCH SƠ ĐỒ ===", "=== GIẢI THÍCH ==="]
     
-    thinking = ""
-    console_message = ""
-    detailed_report = ""
-    mermaid_diagram = ""
-    diagram_explanation = ""
+    sections = {
+        "thinking": "",
+        "console_message": "",
+        "detailed_report": "",
+        "mermaid_diagram": "",
+        "diagram_explanation": ""
+    }
     
-    # 1. Delimiter-based parsing
-    if think_marker in content or console_marker in content or report_marker in content:
-        temp = content
-        
-        # Extract Diagram Explanation
-        for exp_marker in explanation_markers:
-            if exp_marker in temp:
-                parts = temp.split(exp_marker)
-                diagram_explanation = parts[1].strip()
-                temp = parts[0].strip()
-                break
-            
-        # Extract Mermaid Diagram
-        for mer_marker in mermaid_markers:
-            if mer_marker in temp:
-                parts = temp.split(mer_marker)
-                mermaid_diagram = parts[1].strip()
-                temp = parts[0].strip()
-                break
-            
-        # Extract Detailed Report
-        if report_marker in temp:
-            parts = temp.split(report_marker)
-            detailed_report = parts[1].strip()
-            temp = parts[0].strip()
-            
-        # Extract Console Message and Thinking
-        if console_marker in temp:
-            parts = temp.split(console_marker)
-            console_message = parts[1].strip()
-            if think_marker in parts[0]:
-                thinking = parts[0].replace(think_marker, "").strip()
-        else:
-            if think_marker in temp:
-                parts = temp.split(think_marker)
-                thinking = parts[1].strip()
-            else:
-                console_message = temp
+    # Find all matches of markers in content
+    matches = []
+    
+    markers_map = [
+        ("thinking", think_markers),
+        ("console_message", console_markers),
+        ("detailed_report", report_markers),
+        ("mermaid_diagram", mermaid_markers),
+        ("diagram_explanation", explanation_markers)
+    ]
+    
+    for key, markers in markers_map:
+        for marker in markers:
+            idx = content.find(marker)
+            if idx != -1:
+                matches.append((idx, idx + len(marker), key))
                 
-        # Clean up leading/trailing quotes on console message
-        if console_message.startswith('"') and console_message.endswith('"'):
-            console_message = console_message[1:-1].strip()
+    # Sort matches by start index
+    matches.sort(key=lambda x: x[0])
+    
+    if matches:
+        for i in range(len(matches)):
+            start_idx, end_idx, key = matches[i]
+            next_start = matches[i+1][0] if i + 1 < len(matches) else len(content)
+            block_text = content[end_idx:next_start].strip()
             
+            if sections[key]:
+                sections[key] += "\n\n" + block_text
+            else:
+                sections[key] = block_text
+                
+        detailed_report = sections["detailed_report"]
+        console_message = sections["console_message"]
+        thinking = sections["thinking"]
+        mermaid_diagram = sections["mermaid_diagram"]
+        diagram_explanation = sections["diagram_explanation"]
+        
         report_data = detailed_report if detailed_report else content
         
-        # Strip any sequence of equal signs (like === or ====) to satisfy the constraint of avoiding the "====" symbol.
         report_data = re.sub(r'={2,}', '', report_data).replace("***", "")
         console_message = re.sub(r'={2,}', '', console_message).replace("***", "").replace("**", "")
         thinking = re.sub(r'={2,}', '', thinking).replace("***", "").replace("**", "")
         diagram_explanation = re.sub(r'={2,}', '', diagram_explanation).replace("***", "").replace("**", "")
+        
+        if mermaid_diagram.startswith("```mermaid"):
+            mermaid_diagram = mermaid_diagram[10:]
+        elif mermaid_diagram.startswith("```"):
+            mermaid_diagram = mermaid_diagram[3:]
+        if mermaid_diagram.endswith("```"):
+            mermaid_diagram = mermaid_diagram[:-3]
+        mermaid_diagram = mermaid_diagram.strip()
         
         return {
             fallback_key: report_data,

@@ -241,7 +241,7 @@ ${bodyContent}
             const tempDiv = document.createElement('div');
             tempDiv.className = 'academic-pdf-export';
             tempDiv.style.position = 'absolute';
-            tempDiv.style.left = '-9999px';
+            tempDiv.style.left = '0';
             tempDiv.style.top = '0';
             tempDiv.style.zIndex = '-9999';
             tempDiv.style.opacity = '1';
@@ -271,7 +271,7 @@ ${bodyContent}
                 const renderedSvg = document.querySelector('#mermaid-render-output svg');
                 if (renderedSvg) {
                     const clonedSvg = renderedSvg.cloneNode(true);
-                    clonedSvg.removeAttribute('id');
+                    // Keep ID to preserve scoped styles inside <style>
                     clonedSvg.style.transform = 'none';
                     clonedSvg.style.transformOrigin = 'unset';
                     clonedSvg.style.transition = 'none';
@@ -429,7 +429,7 @@ ${bodyContent}
                 cloned.style.transform = 'none';
                 cloned.style.transformOrigin = 'unset';
                 cloned.style.transition = 'none';
-                cloned.removeAttribute('id');
+                // Keep ID to preserve scoped styles inside <style>
 
                 // Extract native dimensions from viewBox
                 let w = 800;
@@ -1796,7 +1796,8 @@ ${bodyContent}
                 explanationText = '';
             }
 
-            // Sync Console Message with the first body paragraph
+            // Sync Console Message with the first body paragraph (disabled to prevent overwriting friendly logs)
+            /*
             const paragraphs = reportText.split('\n').map(p => p.trim()).filter(p => p.length > 0);
             let firstPara = paragraphs.length > 0 ? paragraphs[0] : '';
             if (firstPara.startsWith('#') && paragraphs.length > 1) {
@@ -1812,6 +1813,7 @@ ${bodyContent}
                     }
                 }
             }
+            */
         }
 
         currentMarkdown = reportText;

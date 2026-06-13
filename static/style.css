@@ -820,14 +820,14 @@ body {
     font-weight: 800;
     text-transform: uppercase;
     text-align: center;
-    color: #f97316;
+    color: #000000;
 }
 .markdown-report h2 {
     font-size: 18px;
     margin-top: 32px;
     margin-bottom: 16px;
     font-weight: 700;
-    color: #f97316;
+    color: #0f172a;
     border-bottom: 2px solid #e2e8f0;
     padding-bottom: 6px;
 }
@@ -836,7 +836,7 @@ body {
     margin-top: 22px;
     margin-bottom: 12px;
     font-weight: 600;
-    color: #ea580c;
+    color: #1e293b;
 }
 .markdown-report p  {
     margin-bottom: 14px;
@@ -1104,7 +1104,7 @@ body {
 }
 
 .academic-pdf-export .pdf-header {
-    border-bottom: 2px solid #f97316;
+    border-bottom: 2px solid #0f172a;
     padding-bottom: 12px;
     margin-bottom: 30px;
     display: flex;
@@ -1116,7 +1116,7 @@ body {
     font-size: 16pt;
     font-weight: bold;
     text-transform: uppercase;
-    color: #f97316;
+    color: #0f172a;
 }
 
 .academic-pdf-export .pdf-header-meta {
@@ -1132,7 +1132,7 @@ body {
     margin-top: 15px;
     margin-bottom: 30px;
     text-transform: uppercase;
-    color: #f97316;
+    color: #000000;
 }
 
 .academic-pdf-export > h2 {
@@ -1140,8 +1140,8 @@ body {
     font-weight: bold;
     margin-top: 25px;
     margin-bottom: 12px;
-    border-bottom: 1px solid #f97316;
-    color: #f97316;
+    border-bottom: 1px solid #0f172a;
+    color: #0f172a;
     padding-bottom: 3px;
     page-break-before: always;
     page-break-after: avoid;
@@ -1150,7 +1150,7 @@ body {
 .academic-pdf-export h3 {
     font-size: 12pt;
     font-weight: bold;
-    color: #ea580c;
+    color: #0f172a;
     margin-top: 18px;
     margin-bottom: 8px;
     page-break-after: avoid;
@@ -1182,8 +1182,8 @@ body {
     border-collapse: collapse;
     margin: 18px 0;
     page-break-inside: avoid;
-    border-top: 2px solid #f97316;
-    border-bottom: 2px solid #f97316;
+    border-top: 2px solid #0f172a;
+    border-bottom: 2px solid #0f172a;
 }
 
 .academic-pdf-export th, .academic-pdf-export td {
@@ -1193,7 +1193,7 @@ body {
 }
 
 .academic-pdf-export th {
-    border-bottom: 1px solid #f97316;
+    border-bottom: 1px solid #0f172a;
     font-weight: bold;
     background: transparent;
     color: #0f172a;
@@ -1209,7 +1209,7 @@ body {
 }
 
 .academic-pdf-export blockquote {
-    border-left: 3px solid #f97316;
+    border-left: 3px solid #0f172a;
     padding: 4px 16px;
     margin: 12px 24px;
     font-style: italic;
