@@ -107,12 +107,20 @@ async def serve_index():
 
 @app.get("/style.css", include_in_schema=False)
 async def serve_css():
-    return FileResponse(str(STATIC_DIR / "style.css"), media_type="text/css")
+    return FileResponse(
+        str(STATIC_DIR / "style.css"),
+        media_type="text/css",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
+    )
 
 
 @app.get("/app.js", include_in_schema=False)
 async def serve_js():
-    return FileResponse(str(STATIC_DIR / "app.js"), media_type="application/javascript")
+    return FileResponse(
+        str(STATIC_DIR / "app.js"),
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
+    )
 
 
 @app.get("/favicon.png", include_in_schema=False)

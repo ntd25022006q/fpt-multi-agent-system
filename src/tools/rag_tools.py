@@ -102,13 +102,79 @@ class CustomBM25:
 
 
 
+class SimpleRecursiveCharacterTextSplitter:
+    """A lightweight, self-contained implementation of RecursiveCharacterTextSplitter."""
+    def __init__(self, chunk_size=1000, chunk_overlap=150, separators=None):
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
+        self.separators = separators or ["\n## ", "\n### ", "\n#### ", "\n\n", "\n", " ", ""]
+
+    def split_text(self, text: str) -> list[str]:
+        return self._split(text, self.separators)
+
+    def _split(self, text: str, separators: list[str]) -> list[str]:
+        if len(text) <= self.chunk_size:
+            return [text]
+        if not separators:
+            # If no separators left, split by size
+            chunks = []
+            for i in range(0, len(text), self.chunk_size - self.chunk_overlap):
+                chunks.append(text[i:i + self.chunk_size])
+            return chunks
+
+        separator = separators[0]
+        # Handle empty separator (char-by-char split)
+        if separator == "":
+            return [text[i:i + self.chunk_size] for i in range(0, len(text), self.chunk_size - self.chunk_overlap)]
+
+        splits = text.split(separator)
+        chunks = []
+        current_chunk = ""
+
+        for part in splits:
+            # Reconstruct separator if not first element
+            actual_part = separator + part if current_chunk else part
+            if len(current_chunk) + len(actual_part) <= self.chunk_size:
+                current_chunk += actual_part
+            else:
+                if current_chunk:
+                    chunks.append(current_chunk)
+                sub_chunks = self._split(part, separators[1:])
+                if sub_chunks:
+                    chunks.extend(sub_chunks[:-1])
+                    current_chunk = sub_chunks[-1]
+                else:
+                    current_chunk = ""
+
+        if current_chunk:
+            chunks.append(current_chunk)
+
+        # Apply overlap logic between adjacent chunks
+        overlapped_chunks = []
+        for i, chunk in enumerate(chunks):
+            if i == 0:
+                overlapped_chunks.append(chunk)
+            else:
+                prev_chunk = chunks[i - 1]
+                overlap = prev_chunk[-self.chunk_overlap:] if len(prev_chunk) >= self.chunk_overlap else prev_chunk
+                overlapped_chunks.append(overlap + chunk)
+        return overlapped_chunks
+
+    def split_documents(self, documents: list[Document]) -> list[Document]:
+        split_docs = []
+        for doc in documents:
+            chunks = self.split_text(doc.page_content)
+            for chunk in chunks:
+                split_docs.append(Document(page_content=chunk, metadata=doc.metadata.copy()))
+        return split_docs
+
+
 def get_all_docs() -> list[Document]:
     """Load markdown and text files from RAW_DATA_DIR directly and chunk them in memory."""
     global _all_docs
     if _all_docs is not None:
         return _all_docs
     
-    from langchain_text_splitters import RecursiveCharacterTextSplitter
     _all_docs = []
     if not os.path.exists(RAW_DATA_DIR):
         return []
@@ -127,7 +193,7 @@ def get_all_docs() -> list[Document]:
     if not raw_docs:
         return []
         
-    splitter = RecursiveCharacterTextSplitter(
+    splitter = SimpleRecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=150,
         separators=["\n## ", "\n### ", "\n#### ", "\n\n", "\n", " "]
