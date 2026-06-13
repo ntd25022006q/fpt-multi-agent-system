@@ -42,7 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const serverUrlInput = document.getElementById('server-url-input');
 
     if (serverUrlInput) {
-        serverUrlInput.value = localStorage.getItem('fpt_server_url') || 'https://fpt-multi-agent-system.onrender.com';
+        let defaultUrl = 'https://fpt-multi-agent-system.onrender.com';
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '0.0.0.0' || window.location.port !== '') {
+            defaultUrl = window.location.origin;
+        }
+        serverUrlInput.value = localStorage.getItem('fpt_server_url') || defaultUrl;
         serverUrlInput.addEventListener('input', () => {
             localStorage.setItem('fpt_server_url', serverUrlInput.value.trim());
             checkServerConnection();
