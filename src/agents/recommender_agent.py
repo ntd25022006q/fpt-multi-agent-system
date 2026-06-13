@@ -50,9 +50,9 @@ async def recommender_node(state: ResearchState, config: RunnableConfig = None) 
         
     lang = state.get("language", "vi")
     lang_instruction = (
-        "\nIMPORTANT: The user has asked the question in English. You MUST output both the CONSOLE MESSAGE and the DETAILED REPORT entirely in English."
+        "\nIMPORTANT: The user has asked the question in English. You MUST output all sections (including THINKING, CONSOLE MESSAGE, and DETAILED REPORT) entirely in English."
         if lang == "en" else
-        "\nIMPORTANT: The user has asked the question in Vietnamese. You MUST output both the CONSOLE MESSAGE and the DETAILED REPORT entirely in Vietnamese."
+        "\nQUAN TRỌNG: Câu hỏi bằng TIẾNG VIỆT. Bạn BẮT BUỘC phải viết toàn bộ tất cả các phần (bao gồm cả THINKING, CONSOLE MESSAGE, DETAILED REPORT) hoàn toàn bằng TIẾNG VIỆT. Không sử dụng tiếng Anh."
     )
     human_content = (
         f"Topic: {state['topic']}\n\n"

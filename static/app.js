@@ -211,7 +211,7 @@ ${bodyContent}
     }
 
     if (downloadPdfBtn) {
-        downloadPdfBtn.addEventListener('click', async () => {
+        downloadPdfBtn.addEventListener('click', () => {
             if (!currentMarkdown || currentMarkdown.includes('not generated yet')) {
                 alert('Chưa có báo cáo. Vui lòng chạy quy trình trước!'); return;
             }
@@ -221,40 +221,8 @@ ${bodyContent}
             downloadPdfBtn.disabled = true;
 
             try {
-                // Render markdown to a hidden div for capture
-                const printDiv = document.createElement('div');
-                printDiv.style.cssText = `
-                    position:fixed; top:0; left:0; width:794px; background:#fff; color:#1a202c;
-                    font-family:'Segoe UI',Arial,sans-serif; font-size:13px; line-height:1.65;
-                    padding:40px 48px; z-index:-9999; opacity:0; pointer-events:none;
-                `;
-
-                // Apply same print styles inline
-                const styleEl = document.createElement('style');
-                styleEl.textContent = `
-                    #__pdf_div__ h1{font-size:20px;font-weight:800;color:#0f172a;border-bottom:2px solid #0054a6;padding-bottom:6px;margin:16px 0 10px;}
-                    #__pdf_div__ h2{font-size:15px;font-weight:700;color:#0054a6;margin:14px 0 6px;border-bottom:1px solid #e2e8f0;padding-bottom:2px;}
-                    #__pdf_div__ h3{font-size:13px;font-weight:700;color:#1e3a5f;margin:12px 0 5px;}
-                    #__pdf_div__ p{margin-bottom:7px;color:#2d3748;}
-                    #__pdf_div__ ul,#__pdf_div__ ol{margin:4px 0 8px 18px;color:#2d3748;}
-                    #__pdf_div__ table{width:100%;border-collapse:collapse;margin:10px 0;font-size:11px;}
-                    #__pdf_div__ thead th{background:#1e3a5f;color:#fff;font-weight:700;padding:6px 8px;border:1px solid #1e3a5f;}
-                    #__pdf_div__ tbody td{border:1px solid #cbd5e1;padding:5px 8px;}
-                    #__pdf_div__ tbody tr:nth-child(even) td{background:#f8fafc;}
-                    #__pdf_div__ code{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:2px;padding:0 3px;font-family:monospace;font-size:10px;}
-                    #__pdf_div__ pre{background:#0f172a;border-radius:4px;padding:10px;margin:8px 0;}
-                    #__pdf_div__ pre code{background:none;border:none;color:#e2e8f0;font-size:10px;padding:0;}
-                    #__pdf_div__ hr{border:none;border-top:1px solid #e2e8f0;margin:12px 0;}
-                    #__pdf_div__ blockquote{border-left:3px solid #0054a6;padding:4px 10px;background:#eff6ff;font-style:italic;}
-                    #__pdf_div__ a{color:#0054a6;}
-                    #__pdf_div__ strong{font-weight:700;}
-                `;
-                document.head.appendChild(styleEl);
-                printDiv.id = '__pdf_div__';
-
-                // Header
+                const topic = topicInput.value.trim() || 'Báo cáo chi tiết chiến lược';
                 const dateStr = new Date().toLocaleDateString('vi-VN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-                const topic   = topicInput.value.trim() || 'Báo cáo chi tiết chiến lược';
                 
                 let reportContentHTML = reportView.innerHTML;
                 if (uploadedDiagramDataUrl) {
@@ -265,62 +233,182 @@ ${bodyContent}
                     </div>`;
                 }
 
-                printDiv.innerHTML = `
-                    <div style="border-bottom:3px solid #0054a6;padding-bottom:10px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-end;">
-                      <div>
-                        <div style="font-size:16px;font-weight:800;color:#0054a6;">FPT Software</div>
-                        <div style="font-size:11px;color:#6b7a90;margin-top:2px;">Phòng Nghiên Cứu &amp; Báo Cáo Chi Tiết AI-First</div>
-                      </div>
-                      <div style="text-align:right;font-size:11px;color:#6b7a90;line-height:1.5;">
-                        ${dateStr}<br>Chủ đề: ${topic.substring(0, 60)}${topic.length > 60 ? '…' : ''}
-                      </div>
-                    </div>
-                    ${reportContentHTML}
-                `;
-                document.body.appendChild(printDiv);
-
-                // Use html2canvas to capture
-                const canvas = await html2canvas(printDiv, {
-                    scale: 2,
-                    useCORS: true,
-                    allowTaint: true,
-                    backgroundColor: '#ffffff',
-                    windowWidth: 794,
-                    logging: false
-                });
-
-                document.body.removeChild(printDiv);
-                document.head.removeChild(styleEl);
-
-                // Build jsPDF A4 document
-                const { jsPDF } = window.jspdf;
-                const pdf  = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-                const pageW = pdf.internal.pageSize.getWidth();
-                const pageH = pdf.internal.pageSize.getHeight();
-                const imgW  = pageW;
-                const imgH  = (canvas.height * imgW) / canvas.width;
-
-                // Split into pages
-                let yPosition = 0;
-                const pageImgH = pageH;
-
-                while (yPosition < imgH) {
-                    if (yPosition > 0) pdf.addPage();
-                    pdf.addImage(
-                        canvas.toDataURL('image/jpeg', 0.95),
-                        'JPEG',
-                        0, -yPosition, imgW, imgH,
-                        '', 'FAST'
-                    );
-                    yPosition += pageImgH;
-                }
-
-                const fileName = `FPT_BaoCao_ChiTiet_${new Date().toISOString().slice(0,10)}.pdf`;
-                pdf.save(fileName);
-
+                // Open A4 print window with premium layout styles
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>${topic}</title>
+                        <meta charset="utf-8">
+                        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css">
+                        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+                        <style>
+                            @page {
+                                size: A4;
+                                margin: 20mm 20mm 20mm 20mm;
+                            }
+                            body {
+                                font-family: 'Inter', system-ui, sans-serif;
+                                color: #1e293b;
+                                line-height: 1.62;
+                                font-size: 11.5pt;
+                                background: #fff;
+                                margin: 0;
+                                padding: 0;
+                            }
+                            h1, h2, h3, h4 {
+                                color: #0054a6;
+                                font-weight: 700;
+                                margin-top: 1.6em;
+                                margin-bottom: 0.6em;
+                                page-break-after: avoid;
+                            }
+                            h1 {
+                                font-size: 20pt;
+                                border-bottom: 2.5px solid #0054a6;
+                                padding-bottom: 8px;
+                                margin-top: 0;
+                            }
+                            h2 {
+                                font-size: 15pt;
+                                border-bottom: 1px solid #e2e8f0;
+                                padding-bottom: 4px;
+                            }
+                            h3 {
+                                font-size: 12.5pt;
+                            }
+                            p {
+                                margin: 0 0 1em;
+                                text-align: justify;
+                            }
+                            ul, ol {
+                                margin: 0 0 1em 1.5em;
+                                padding: 0;
+                            }
+                            li {
+                                margin-bottom: 0.4em;
+                            }
+                            /* KaTeX math displays */
+                            .katex-display {
+                                background: #f8fafc;
+                                border-left: 3.5px solid #0054a6;
+                                padding: 12px 16px;
+                                margin: 16px 0;
+                                border-radius: 0 6px 6px 0;
+                                overflow-x: auto;
+                                page-break-inside: avoid;
+                            }
+                            table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                margin: 16px 0;
+                                page-break-inside: avoid;
+                            }
+                            th, td {
+                                border: 1px solid #cbd5e1;
+                                padding: 8px 12px;
+                                text-align: left;
+                                font-size: 10.5pt;
+                            }
+                            th {
+                                background: #f8fafc;
+                                color: #0054a6;
+                                font-weight: 700;
+                            }
+                            pre {
+                                background: #0f172a;
+                                color: #f8fafc;
+                                padding: 16px;
+                                border-radius: 6px;
+                                overflow-x: auto;
+                                font-size: 10pt;
+                                page-break-inside: avoid;
+                            }
+                            code {
+                                background: #f1f5f9;
+                                padding: 2px 4px;
+                                border-radius: 4px;
+                                font-size: 0.9em;
+                                font-family: monospace;
+                            }
+                            pre code {
+                                background: none;
+                                padding: 0;
+                                color: inherit;
+                                font-size: inherit;
+                            }
+                            .header {
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: flex-end;
+                                border-bottom: 2.5px solid #0054a6;
+                                padding-bottom: 10px;
+                                margin-bottom: 30px;
+                            }
+                            .header-title {
+                                font-size: 15pt;
+                                font-weight: 800;
+                                color: #0054a6;
+                                text-transform: uppercase;
+                                letter-spacing: 0.5px;
+                            }
+                            .header-meta {
+                                text-align: right;
+                                font-size: 9.5pt;
+                                color: #64748b;
+                                line-height: 1.4;
+                            }
+                            blockquote {
+                                border-left: 3px solid #0054a6;
+                                padding: 8px 16px;
+                                background: #eff6ff;
+                                font-style: italic;
+                                margin: 16px 0;
+                                border-radius: 0 6px 6px 0;
+                                page-break-inside: avoid;
+                            }
+                            img {
+                                max-width: 100%;
+                                height: auto;
+                                display: block;
+                                margin: 16px auto;
+                                page-break-inside: avoid;
+                            }
+                            @media print {
+                                body {
+                                    -webkit-print-color-adjust: exact;
+                                    print-color-adjust: exact;
+                                }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="header">
+                            <div>
+                                <div class="header-title">FPT Software</div>
+                                <div style="font-size:9pt;color:#64748b;margin-top:2px;font-weight:500;">Hệ Thống Báo Cáo Tri Thức Doanh Nghiệp Multi-Agent</div>
+                            </div>
+                            <div class="header-meta">
+                                ${dateStr}<br>Chủ đề: ${topic}
+                            </div>
+                        </div>
+                        <div class="content">
+                            ${reportContentHTML}
+                        </div>
+                        <script>
+                            window.onload = function() {
+                                window.print();
+                                setTimeout(function() { window.close(); }, 500);
+                            };
+                        </script>
+                    </body>
+                    </html>
+                `);
+                printWindow.document.close();
             } catch (err) {
-                console.error('PDF generation error:', err);
-                alert(`Lỗi tạo PDF: ${err.message}\n\nThử lại hoặc dùng nút Tải DOCX thay thế.`);
+                console.error('PDF error:', err);
+                alert(`Lỗi tạo PDF: ${err.message}`);
             } finally {
                 downloadPdfBtn.innerHTML = origHTML;
                 downloadPdfBtn.disabled = false;
@@ -1233,6 +1321,9 @@ ${bodyContent}
                 rawText: '',
                 thinkingText: '',
                 contentText: '',
+                reportText: '',
+                diagramText: '',
+                explanationText: '',
                 section: 'none',
                 logHeaderEl: logHeader,
                 thinkingDetailsEl: thinkingContainer,
@@ -1247,22 +1338,45 @@ ${bodyContent}
             // Append incoming LLM token in real-time
             if (data.node === activeStream.node) {
                 activeStream.rawText += data.token;
+                const rawText = activeStream.rawText;
                 
-                // Track transitions between THINKING and CONSOLE MESSAGE sections
-                if (activeStream.rawText.includes('=== THINKING ===') && activeStream.section === 'none') {
+                // Track transitions between THINKING, CONSOLE MESSAGE, DETAILED REPORT, MERMAID DIAGRAM and DIAGRAM EXPLANATION sections
+                if (rawText.includes('=== THINKING ===') && activeStream.section === 'none') {
                     activeStream.section = 'thinking';
                     activeStream.thinkingDetailsEl.style.display = 'block';
                 }
                 
-                if (activeStream.rawText.includes('=== CONSOLE MESSAGE ===') && activeStream.section !== 'content') {
+                if (rawText.includes('=== CONSOLE MESSAGE ===') && activeStream.section !== 'content' && activeStream.section !== 'report' && activeStream.section !== 'diagram' && activeStream.section !== 'explanation') {
                     activeStream.section = 'content';
+                }
+
+                if (rawText.includes('=== DETAILED REPORT ===') && activeStream.section !== 'report' && activeStream.section !== 'diagram' && activeStream.section !== 'explanation') {
+                    activeStream.section = 'report';
+                    // Programmatically switch to the Report tab when report starts streaming!
+                    const reportTabBtn = document.getElementById('tab-btn-report');
+                    if (reportTabBtn && !reportTabBtn.classList.contains('active')) {
+                        reportTabBtn.click();
+                    }
+                }
+
+                if ((rawText.includes('=== MERMAID DIAGRAM ===') || rawText.includes('=== SƠ ĐỒ MERMAID ===') || rawText.includes('=== BIỂU ĐỒ MERMAID ===')) && activeStream.section !== 'diagram' && activeStream.section !== 'explanation') {
+                    activeStream.section = 'diagram';
+                    // Programmatically switch to the Diagram tab when diagram starts streaming!
+                    const diagramTabBtn = document.getElementById('tab-btn-diagram');
+                    if (diagramTabBtn && !diagramTabBtn.classList.contains('active')) {
+                        diagramTabBtn.click();
+                    }
+                }
+
+                if ((rawText.includes('=== DIAGRAM EXPLANATION ===') || rawText.includes('=== GIẢI THÍCH CHI TIẾT SƠ ĐỒ ===') || rawText.includes('=== GIẢI THÍCH SƠ ĐỒ ===') || rawText.includes('=== GIẢI THÍCH ===')) && activeStream.section !== 'explanation') {
+                    activeStream.section = 'explanation';
                 }
                 
                 if (activeStream.section === 'thinking') {
                     if (activeStream.thinkingContentEl.textContent === '') {
-                        const idx = activeStream.rawText.indexOf('=== THINKING ===');
+                        const idx = rawText.indexOf('=== THINKING ===');
                         if (idx !== -1) {
-                            const after = activeStream.rawText.substring(idx + 16);
+                            const after = rawText.substring(idx + 16);
                             activeStream.thinkingText = after;
                             activeStream.thinkingContentEl.textContent = cleanInternalFilenames(stripMarkdown(after));
                             consoleOutput.scrollTop = consoleOutput.scrollHeight;
@@ -1275,9 +1389,9 @@ ${bodyContent}
                     }
                 } else if (activeStream.section === 'content') {
                     if (activeStream.logBodyEl.textContent === '') {
-                        const idx = activeStream.rawText.indexOf('=== CONSOLE MESSAGE ===');
+                        const idx = rawText.indexOf('=== CONSOLE MESSAGE ===');
                         if (idx !== -1) {
-                            const after = activeStream.rawText.substring(idx + 23);
+                            const after = rawText.substring(idx + 23);
                             activeStream.contentText = after;
                             activeStream.logBodyEl.textContent = cleanInternalFilenames(stripMarkdown(after));
                             consoleOutput.scrollTop = consoleOutput.scrollHeight;
@@ -1287,6 +1401,82 @@ ${bodyContent}
                     if (!data.token.includes('===') && !data.token.includes('DETAILED')) {
                         activeStream.contentText += data.token;
                         activeStream.logBodyEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.contentText));
+                    }
+                } else if (activeStream.section === 'report') {
+                    if (!activeStream.reportText) {
+                        const idx = rawText.indexOf('=== DETAILED REPORT ===');
+                        if (idx !== -1) {
+                            const after = rawText.substring(idx + 23);
+                            activeStream.reportText = after;
+                        } else {
+                            activeStream.reportText = '';
+                        }
+                    } else {
+                        if (!data.token.includes('===') && !data.token.includes('MERMAID') && !data.token.includes('SƠ ĐỒ') && !data.token.includes('BIỂU ĐỒ')) {
+                            activeStream.reportText += data.token;
+                        }
+                    }
+                    if (activeStream.reportText) {
+                        const cleanedReportText = cleanInternalFilenames(activeStream.reportText.replace(/={2,}/g, '').replace(/\*\*\*/g, ''));
+                        currentMarkdown = cleanedReportText;
+                        if (rawMarkdownText) rawMarkdownText.value = cleanedReportText;
+                        renderMarkdownReport(cleanedReportText);
+                    }
+                } else if (activeStream.section === 'diagram') {
+                    if (!activeStream.diagramText) {
+                        const idx = Math.max(rawText.indexOf('=== MERMAID DIAGRAM ==='), rawText.indexOf('=== SƠ ĐỒ MERMAID ==='), rawText.indexOf('=== BIỂU ĐỒ MERMAID ==='));
+                        if (idx !== -1) {
+                            let offset = 23;
+                            if (rawText.includes('=== SƠ ĐỒ MERMAID ===')) offset = 21;
+                            else if (rawText.includes('=== BIỂU ĐỒ MERMAID ===')) offset = 23;
+                            const after = rawText.substring(idx + offset);
+                            activeStream.diagramText = after;
+                        } else {
+                            activeStream.diagramText = '';
+                        }
+                    } else {
+                        if (!data.token.includes('===') && !data.token.includes('DIAGRAM') && !data.token.includes('GIẢI THÍCH')) {
+                            activeStream.diagramText += data.token;
+                        }
+                    }
+                    if (activeStream.diagramText) {
+                        const cleanedDiagramText = activeStream.diagramText.replace(/={2,}/g, '').trim();
+                        const outputContainer = document.getElementById('mermaid-render-output');
+                        if (outputContainer && cleanedDiagramText) {
+                            outputContainer.innerHTML = `<div style="padding:20px; font-family: 'Fira Code', monospace; font-size:11px; white-space:pre-wrap; text-align:left; color:#475569; width: 100%; height: 100%; box-sizing: border-box;"><div style="color:var(--fpt-blue); font-weight:700; margin-bottom:8px;"><i class="fa-solid fa-spinner fa-spin"></i> ĐANG VẼ SƠ ĐỒ KIẾN TRÚC...</div><code style="display:block; background:#f8fafc; padding:12px; border-radius:6px; border:1px solid #e2e8f0; overflow-x:auto;">${cleanedDiagramText}</code></div>`;
+                        }
+                    }
+                } else if (activeStream.section === 'explanation') {
+                    if (!activeStream.explanationText) {
+                        const idx = Math.max(
+                            rawText.indexOf('=== DIAGRAM EXPLANATION ==='),
+                            rawText.indexOf('=== GIẢI THÍCH CHI TIẾT SƠ ĐỒ ==='),
+                            rawText.indexOf('=== GIẢI THÍCH SƠ ĐỒ ==='),
+                            rawText.indexOf('=== GIẢI THÍCH ===')
+                        );
+                        if (idx !== -1) {
+                            let offset = 27;
+                            if (rawText.includes('=== GIẢI THÍCH CHI TIẾT SƠ ĐỒ ===')) offset = 33;
+                            else if (rawText.includes('=== GIẢI THÍCH SƠ ĐỒ ===')) offset = 24;
+                            else if (rawText.includes('=== GIẢI THÍCH ===')) offset = 18;
+                            const after = rawText.substring(idx + offset);
+                            activeStream.explanationText = after;
+                        } else {
+                            activeStream.explanationText = '';
+                        }
+                    } else {
+                        if (!data.token.includes('===')) {
+                            activeStream.explanationText += data.token;
+                        }
+                    }
+                    if (activeStream.explanationText) {
+                        const expContainer = document.getElementById('mermaid-explanation-container');
+                        const expContent = document.getElementById('mermaid-explanation-content');
+                        if (expContainer && expContent) {
+                            const cleanedExplanation = cleanInternalFilenames(activeStream.explanationText.replace(/={2,}/g, ''));
+                            expContent.innerHTML = marked.parse(cleanedExplanation);
+                            expContainer.style.display = 'block';
+                        }
                     }
                 }
                 consoleOutput.scrollTop = consoleOutput.scrollHeight;

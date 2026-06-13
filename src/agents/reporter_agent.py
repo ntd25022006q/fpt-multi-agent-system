@@ -259,7 +259,7 @@ async def reporter_node(state: ResearchState, config: RunnableConfig = None) -> 
     lang_instruction = (
         "\nIMPORTANT: The user has asked the question in English. You MUST output all sections (THINKING, CONSOLE MESSAGE, DETAILED REPORT, MERMAID DIAGRAM, DIAGRAM EXPLANATION) entirely in English."
         if lang == "en" else
-        "\nIMPORTANT: The user has asked the question in Vietnamese. You MUST output all sections (THINKING, CONSOLE MESSAGE, DETAILED REPORT, MERMAID DIAGRAM, DIAGRAM EXPLANATION) entirely in Vietnamese."
+        "\nQUAN TRỌNG: Câu hỏi bằng TIẾNG VIỆT. Bạn BẮT BUỘC phải viết toàn bộ tất cả các phần (bao gồm cả THINKING, CONSOLE MESSAGE, DETAILED REPORT, DIAGRAM EXPLANATION) hoàn toàn bằng TIẾNG VIỆT. Không sử dụng tiếng Anh."
     )
     if query_type == "qa":
         prompt = REPORTER_QA_PROMPT_EN if lang == "en" else REPORTER_QA_PROMPT_VI
