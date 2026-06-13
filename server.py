@@ -39,6 +39,8 @@ STATIC_DIR.mkdir(exist_ok=True)
 # Mount static assets under /assets (CSS, JS, fonts etc.)
 # We do NOT mount at "/" to avoid swallowing /api/* routes
 app.mount("/assets", StaticFiles(directory=str(STATIC_DIR)), name="assets")
+app.mount("/lib", StaticFiles(directory=str(STATIC_DIR / "lib")), name="lib")
+app.mount("/webfonts", StaticFiles(directory=str(STATIC_DIR / "webfonts")), name="webfonts")
 
 
 # ── Bypass header helper ──────────────────────────────────────────────────────
