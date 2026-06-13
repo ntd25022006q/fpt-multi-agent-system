@@ -122,6 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let uploadedDiagramDataUrl = null;
 
     let eventSource   = null;
+    let hasCompletedSuccessfully = false;
     let runStartTime  = null;
     let timerInterval = null;
 
@@ -1128,6 +1129,7 @@ ${bodyContent}
         }
 
         if (data.done) {
+            hasCompletedSuccessfully = true;
             // Render report and update stats immediately in real-time!
             clearInterval(timerInterval);
             highlightPanel('complete');
@@ -1468,6 +1470,7 @@ ${bodyContent}
         }
 
         resetUI();
+        hasCompletedSuccessfully = false;
         runBtn.disabled  = true;
         runBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang chạy…';
         if (stopBtn) stopBtn.style.display = 'block';
@@ -1503,6 +1506,13 @@ ${bodyContent}
         };
 
         eventSource.onerror = (err) => {
+            if (hasCompletedSuccessfully) {
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+                return;
+            }
             const statusText = statStatus.textContent || '';
             if (statusText.includes('Hoàn Thành') || statusText.includes('Bị Từ Chối') || statusText.includes('Đã tạm dừng') || statusText.includes('Thất Bại')) {
                 if (eventSource) {
@@ -2058,6 +2068,7 @@ ${bodyContent}
                 consoleOutput.appendChild(reconnectLog);
                 consoleOutput.scrollTop = consoleOutput.scrollHeight;
 
+                hasCompletedSuccessfully = false;
                 if (eventSource) {
                     eventSource.close();
                     eventSource = null;
@@ -2076,6 +2087,13 @@ ${bodyContent}
                 };
 
                 eventSource.onerror = (err) => {
+                    if (hasCompletedSuccessfully) {
+                        if (eventSource) {
+                            eventSource.close();
+                            eventSource = null;
+                        }
+                        return;
+                    }
                     const statusText = statStatus.textContent || '';
                     if (statusText.includes('Hoàn Thành') || statusText.includes('Bị Từ Chối') || statusText.includes('Đã tạm dừng') || statusText.includes('Thất Bại')) {
                         if (eventSource) {
