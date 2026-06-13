@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const url = getApiPrefix() + '/api/report';
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const timeoutId = setTimeout(() => controller.abort(), 45000);
 
         fetch(url, { method: 'GET', signal: controller.signal })
             .then(res => {
