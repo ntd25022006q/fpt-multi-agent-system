@@ -225,11 +225,46 @@ ${bodyContent}
                 const dateStr = new Date().toLocaleDateString('vi-VN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
                 
                 let reportContentHTML = reportView.innerHTML;
+                
+                // Embed user uploaded diagram if present
                 if (uploadedDiagramDataUrl) {
                     reportContentHTML += `
                     <div style="page-break-before: always; text-align: center; margin-top: 30px;">
-                        <h2 style="color: #0054a6; font-size: 14pt; font-weight: bold; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 15px;">SƠ ĐỒ KIẾN TRÚC HỆ THỐNG</h2>
+                        <h2 style="color: #0054a6; font-size: 14pt; font-weight: bold; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 15px;">SƠ ĐỒ KIẾN TRÚC HỆ THỐNG (ẢNH TẢI LÊN)</h2>
                         <p style="text-align: center;"><img src="${uploadedDiagramDataUrl}" style="max-width: 100%; max-height: 400px; border-radius: 6px;"></p>
+                    </div>`;
+                }
+                
+                // Embed automatically generated Mermaid SVG diagram if present
+                const renderedSvg = document.querySelector('#mermaid-render-output svg');
+                if (renderedSvg) {
+                    const clonedSvg = renderedSvg.cloneNode(true);
+                    clonedSvg.removeAttribute('id');
+                    clonedSvg.style.transform = 'none';
+                    clonedSvg.style.maxWidth = '100%';
+                    clonedSvg.style.height = 'auto';
+                    clonedSvg.style.display = 'block';
+                    clonedSvg.style.margin = '20px auto';
+                    
+                    const svgHtml = clonedSvg.outerHTML;
+                    reportContentHTML += `
+                    <div style="page-break-before: always; text-align: center; margin-top: 30px;">
+                        <h2 style="color: #0054a6; font-size: 14pt; font-weight: bold; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 15px;">SƠ ĐỒ KIẾN TRÚC HỆ THỐNG</h2>
+                        <div class="pdf-mermaid-svg" style="margin: 0 auto; display: inline-block; text-align: center; max-width: 100%;">
+                            ${svgHtml}
+                        </div>
+                    </div>`;
+                }
+                
+                // Embed explanation text if present
+                const expContent = document.getElementById('mermaid-explanation-content');
+                if (expContent && expContent.innerHTML && expContent.innerHTML.trim() !== '') {
+                    reportContentHTML += `
+                    <div style="page-break-before: always; margin-top: 30px;">
+                        <h2 style="color: #0054a6; font-size: 14pt; font-weight: bold; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 15px;">GIẢI THÍCH CHI TIẾT SƠ ĐỒ</h2>
+                        <div class="pdf-explanation" style="text-align: justify; line-height: 1.6;">
+                            ${expContent.innerHTML}
+                        </div>
                     </div>`;
                 }
 
@@ -374,6 +409,12 @@ ${bodyContent}
                                 display: block;
                                 margin: 16px auto;
                                 page-break-inside: avoid;
+                            }
+                            .pdf-mermaid-svg svg {
+                                max-width: 100% !important;
+                                height: auto !important;
+                                display: block;
+                                margin: 0 auto;
                             }
                             @media print {
                                 body {
