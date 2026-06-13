@@ -1631,7 +1631,6 @@ ${bodyContent}
         // Protect math blocks from marked.js escaping
         const displayMath = [];
         const inlineMath = [];
-        let processed = content;
 
         processed = processed.replace(/\$\$([\s\S]+?)\$\$/g, (match, math) => {
             const placeholder = `MATHBLOCKPLACEHOLDER${displayMath.length}`;
