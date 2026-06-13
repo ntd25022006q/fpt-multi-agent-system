@@ -775,18 +775,9 @@ ${bodyContent}
 
     // ── Typewriter Effect ────────────────────────────────────────────────────
     function typeText(element, text, speed = 4) {
-        return new Promise(resolve => {
-            let i = 0;
-            const timer = setInterval(() => {
-                if (i < text.length) {
-                    element.textContent += text[i++];
-                    consoleOutput.scrollTop = consoleOutput.scrollHeight;
-                } else {
-                    clearInterval(timer);
-                    resolve();
-                }
-            }, speed);
-        });
+        element.textContent = text;
+        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        return Promise.resolve();
     }
 
     function stripMarkdown(text) {
