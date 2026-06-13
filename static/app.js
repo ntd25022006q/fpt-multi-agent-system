@@ -122,6 +122,19 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentDiagramCode = '';
     let hideAnalysisLogText = localStorage.getItem('fpt_hide_analysis_log_text') === 'true';
 
+    // Active real-time stream state
+    let activeStream = {
+        node: null,
+        rawText: '',
+        thinkingText: '',
+        contentText: '',
+        section: 'none',
+        logHeaderEl: null,
+        thinkingDetailsEl: null,
+        thinkingContentEl: null,
+        logBodyEl: null
+    };
+
     // ── Tab Switching ────────────────────────────────────────────────────────
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -796,6 +809,66 @@ ${bodyContent}
             .trim();
     }
 
+    const FILENAME_MAP = {
+        "agentvista_testvista.md": "Tài liệu Khảo sát AgentVista & TestVista",
+        "ai_first_challenges.md": "Báo cáo Thách thức Chiến lược AI-First",
+        "codevista_features.md": "Tài liệu Tính năng CodeVista",
+        "coding_standards.md": "Quy chuẩn Phát triển Phần mềm FPT Software",
+        "flezi_foundry_adlc.md": "Báo cáo Quy trình Vận hành Flezi Foundry ADLC",
+        "flezipt_architecture.md": "Kiến trúc Nền tảng Flezi Platform (FlezIPT)",
+        "fpt_academic_publications.md": "Các Công trình Nghiên cứu Khoa học FPT Software",
+        "fpt_agentic_ai_2026.md": "Báo cáo Phát triển Agentic AI FPT Software 2026",
+        "fpt_ai_initiatives_2026.md": "Sáng kiến Chiến lược AI FPT Software 2026",
+        "fpt_ai_research_lab_2026.md": "Tài liệu Phòng Nghiên cứu Trí tuệ Nhân tạo FPT AI Research Lab",
+        "fpt_ai_strategy_advisory_2026.md": "Báo cáo Tư vấn Chiến lược AI FPT Software 2026",
+        "fpt_architecture_consulting_2026.md": "Quy trình Tư vấn Kiến trúc Công nghệ FPT Software 2026",
+        "fpt_enterprise_products_2026.md": "Danh mục Sản phẩm Doanh nghiệp FPT Software 2026",
+        "fpt_financial_growth_2026.md": "Báo cáo Phát triển Tài chính FPT Software 2026",
+        "fpt_flezi_ecosystem.md": "Tài liệu Hệ sinh thái Flezi Ecosystem FPT",
+        "fpt_global_presence_2026.md": "Báo cáo Năng lực Toàn cầu FPT Software 2026",
+        "fpt_global_verticals_2026.md": "Tài liệu Lĩnh vực Kinh doanh Toàn cầu FPT Software 2026",
+        "fpt_research.md": "Báo cáo Nghiên cứu và Phát triển Công nghệ FPT Software",
+        "fpt_risk_compliance_2026.md": "Tài liệu Quản trị Rủi ro & Tuân thủ FPT Software 2026",
+        "fpt_software_overview_2026.md": "Tài liệu Tổng quan FPT Software 2026",
+        "sdlc_evolution.md": "Tài liệu Tiến trình Phát triển Phần mềm SDLC FPT",
+        "security_best_practices.md": "Quy chuẩn Bảo mật Thông tin FPT Software",
+    };
+
+    function cleanInternalFilenames(text) {
+        if (!text) return '';
+        let cleaned = text;
+        
+        // 1. Remove RAG prefixes and list of files in parentheses
+        const prefixPat = /(?:Truy\s+xuất\s+dữ\s+liệu|Truy\s+xuất\s+tri\s+thức|Nguồn\s+dữ\s+liệu|Tham\s+khảo)\s+từ\s+(?:kho\s+)?(?:tri\s+thức|dữ\s+liệu)\s+nội\s+bộ\s*(?:\([^)]*\)|:[^\n.]*|)/gi;
+        cleaned = cleaned.replace(prefixPat, '');
+        
+        // Remove parenthesized lists of filenames
+        const parenPat = /\(\s*[^)]*\.(?:md|txt)[^)]*\)/gi;
+        cleaned = cleaned.replace(parenPat, '');
+        
+        // 2. Fallback translations
+        const sortedKeys = Object.keys(FILENAME_MAP).sort((a, b) => b.length - a.length);
+        for (const filename of sortedKeys) {
+            const title = FILENAME_MAP[filename];
+            const escaped = filename.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const regex = new RegExp(escaped, 'gi');
+            cleaned = cleaned.replace(regex, title);
+        }
+        
+        for (const filename of sortedKeys) {
+            const title = FILENAME_MAP[filename];
+            const nameNoExt = filename.split('.').slice(0, -1).join('.');
+            const escaped = nameNoExt.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const regex = new RegExp('\\b' + escaped + '\\b', 'gi');
+            cleaned = cleaned.replace(regex, title);
+        }
+        
+        // Strip any remaining raw .md / .txt filenames
+        cleaned = cleaned.replace(/\b[a-zA-Z0-9_-]+\.(?:md|txt)\b/g, '');
+        
+        return cleaned;
+    }
+
     // ── Print Queue ──────────────────────────────────────────────────────────
     async function processQueue() {
         if (printQueue.length === 0) { isPrinting = false; return; }
@@ -858,7 +931,7 @@ ${bodyContent}
         if (item.thinking) {
             const thinkingContainer = document.createElement('details');
             thinkingContainer.className = 'console-log thinking-details';
-            thinkingContainer.style.cssText = `margin-left: 12px; margin-bottom: 8px; border-left: 2px dashed ${titleColor}; padding-left: 10px; color: #8a9ca8; font-style: italic; font-size: 11.5px;`;
+            thinkingContainer.style.cssText = 'border-radius: 0 8px 8px 0;';
             thinkingContainer.open = true; // default to open for clear intuition
             
             const summary = document.createElement('summary');
@@ -1109,9 +1182,115 @@ ${bodyContent}
             // Update node visual highlight and badge immediately in real-time!
             highlightNode(data.node);
             
-            printQueue.push({ type: 'start', node: data.node });
-            if (!isPrinting) processQueue();
+            // Immediately create the DOM containers for real-time streaming console logs!
+            const nk = data.node;
+            const mapping = agentMappings[nk];
+            let titleColor = '#94a3b8';
+            if      (nk === 'guardrail')    titleColor = 'var(--accent-guardrail)';
+            else if (nk === 'researcher')   titleColor = 'var(--accent-researcher)';
+            else if (nk === 'analyst')      titleColor = 'var(--accent-analyst)';
+            else if (nk === 'risk_assessor') titleColor = 'var(--accent-risk)';
+            else if (nk === 'recommender')  titleColor = 'var(--accent-recommender)';
+            else if (nk === 'reporter')     titleColor = 'var(--accent-reporter)';
+
+            // Clean welcome panel if it exists
+            const welcome = consoleOutput.querySelector('.console-welcome');
+            if (welcome) {
+                consoleOutput.innerHTML = '';
+            }
+
+            const logHeader = document.createElement('div');
+            logHeader.className = 'console-log';
+            const agentName = mapping?.name ?? nk.toUpperCase();
+            logHeader.innerHTML = `<span style="color:${titleColor};font-weight:bold;">[${agentName}]</span><span class="analysis-log-suffix"> nhật ký phân tích:</span>`;
+            consoleOutput.appendChild(logHeader);
+
+            // Collapsible thinking process container (visible/open by default)
+            const thinkingContainer = document.createElement('details');
+            thinkingContainer.className = 'console-log thinking-details';
+            thinkingContainer.open = true;
+
+            const summary = document.createElement('summary');
+            summary.innerHTML = '<i class="fa-solid fa-brain"></i> Quá trình suy nghĩ (Thinking Process)';
+            thinkingContainer.appendChild(summary);
+
+            const thinkingContent = document.createElement('div');
+            thinkingContent.style.cssText = 'white-space: pre-line; line-height: 1.5; padding: 4px 0;';
+            thinkingContainer.appendChild(thinkingContent);
+            consoleOutput.appendChild(thinkingContainer);
+
+            // Log body container
+            const logBody = document.createElement('div');
+            logBody.className  = 'console-log';
+            logBody.style.cssText = `color:#b0bec8;padding-left:12px;border-left:2px solid ${titleColor};margin-bottom:12px;line-height:1.55;`;
+            consoleOutput.appendChild(logBody);
+
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+
+            // Update active stream details
+            activeStream = {
+                node: nk,
+                rawText: '',
+                thinkingText: '',
+                contentText: '',
+                section: 'none',
+                logHeaderEl: logHeader,
+                thinkingDetailsEl: thinkingContainer,
+                thinkingContentEl: thinkingContent,
+                logBodyEl: logBody
+            };
+
             saveActiveSearchState('running');
+        }
+
+        if (data.type === 'token') {
+            // Append incoming LLM token in real-time
+            if (data.node === activeStream.node) {
+                activeStream.rawText += data.token;
+                
+                // Track transitions between THINKING and CONSOLE MESSAGE sections
+                if (activeStream.rawText.includes('=== THINKING ===') && activeStream.section === 'none') {
+                    activeStream.section = 'thinking';
+                    activeStream.thinkingDetailsEl.style.display = 'block';
+                }
+                
+                if (activeStream.rawText.includes('=== CONSOLE MESSAGE ===') && activeStream.section !== 'content') {
+                    activeStream.section = 'content';
+                }
+                
+                if (activeStream.section === 'thinking') {
+                    if (activeStream.thinkingContentEl.textContent === '') {
+                        const idx = activeStream.rawText.indexOf('=== THINKING ===');
+                        if (idx !== -1) {
+                            const after = activeStream.rawText.substring(idx + 16);
+                            activeStream.thinkingText = after;
+                            activeStream.thinkingContentEl.textContent = cleanInternalFilenames(stripMarkdown(after));
+                            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                            return;
+                        }
+                    }
+                    if (!data.token.includes('===') && !data.token.includes('CONSOLE')) {
+                        activeStream.thinkingText += data.token;
+                        activeStream.thinkingContentEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.thinkingText));
+                    }
+                } else if (activeStream.section === 'content') {
+                    if (activeStream.logBodyEl.textContent === '') {
+                        const idx = activeStream.rawText.indexOf('=== CONSOLE MESSAGE ===');
+                        if (idx !== -1) {
+                            const after = activeStream.rawText.substring(idx + 23);
+                            activeStream.contentText = after;
+                            activeStream.logBodyEl.textContent = cleanInternalFilenames(stripMarkdown(after));
+                            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                            return;
+                        }
+                    }
+                    if (!data.token.includes('===') && !data.token.includes('DETAILED')) {
+                        activeStream.contentText += data.token;
+                        activeStream.logBodyEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.contentText));
+                    }
+                }
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
         }
 
         if (data.type === 'node_end' && data.content) {
@@ -1139,7 +1318,17 @@ ${bodyContent}
                 badge.title = data.model || '';
             }
 
-            queuePrint(data.node, data.content, data.duration, data.tokens, data.thinking);
+            // Sync with final cleaned text from server
+            if (data.node === activeStream.node) {
+                if (activeStream.thinkingContentEl && data.thinking) {
+                    activeStream.thinkingContentEl.textContent = cleanInternalFilenames(stripMarkdown(data.thinking));
+                }
+                if (activeStream.logBodyEl && data.content) {
+                    activeStream.logBodyEl.textContent = cleanInternalFilenames(stripMarkdown(data.content));
+                }
+                activeStream.node = null;
+            }
+
             saveActiveSearchState('running');
         }
     }
@@ -1171,115 +1360,110 @@ ${bodyContent}
             }
         }, 50);
 
-        const abortController = new AbortController();
-        window.activeFetchAbortController = abortController;
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
 
-        fetch(getApiPrefix() + `/api/run?topic=${encodeURIComponent(topic)}`, {
-            signal: abortController.signal,
-            headers: {
-                'Accept': 'text/event-stream'
-            }
-        })
-        .then(async response => {
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder('utf-8');
-            let buffer = '';
-            
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-                
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop(); // Keep partial line in buffer
-                
-                for (const line of lines) {
-                    const cleanLine = line.trim();
-                    if (!cleanLine.startsWith('data:')) continue;
-                    
-                    const eventDataStr = cleanLine.substring(5).trim();
-                    if (!eventDataStr) continue;
-                    
-                    let data;
-                    try {
-                        data = JSON.parse(eventDataStr);
-                    } catch (e) {
-                        console.error('SSE JSON parse error:', e);
-                        continue;
-                    }
-                    
-                    handleSseMessage(data);
-                }
-            }
-            
-            if (buffer.trim().startsWith('data:')) {
-                const cleanLine = buffer.trim();
-                const eventDataStr = cleanLine.substring(5).trim();
-                if (eventDataStr) {
-                    try {
-                        const data = JSON.parse(eventDataStr);
-                        handleSseMessage(data);
-                    } catch (e) {}
-                }
-            }
-        })
-        .catch(err => {
-            if (err.name === 'AbortError') {
-                return; // User cancelled
-            }
-            console.error('Fetch SSE error:', err);
-            if (statStatus.textContent !== 'Hoàn Thành ✅' && statStatus.textContent !== 'Bị Từ Chối ❌' && statStatus.textContent !== 'Đã tạm dừng') {
-                clearInterval(timerInterval);
-                statStatus.textContent = 'Lỗi Kết Nối';
-                statStatus.style.color = '#ef4444';
-                runBtn.disabled  = false;
-                runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
-                if (stopBtn) stopBtn.style.display = 'none';
+        eventSource = new EventSource(getApiPrefix() + `/api/run?topic=${encodeURIComponent(topic)}`);
 
-                if (consoleOutput) {
-                    const logDiv = document.createElement('div');
-                    logDiv.className   = 'console-log';
-                    logDiv.style.color = '#ef4444';
-                    logDiv.style.marginTop = '10px';
-                    logDiv.style.padding = '10px';
-                    logDiv.style.background = 'rgba(239, 68, 68, 0.1)';
-                    logDiv.style.borderLeft = '4px solid #ef4444';
-                    logDiv.style.borderRadius = '4px';
-                    logDiv.innerHTML = `<span style="font-weight:bold;"><i class="fa-solid fa-circle-exclamation"></i> [LỖI KẾT NỐI MÁY CHỦ]</span> Không thể kết nối tới API tại <strong>${getApiPrefix()}</strong>.<br><br>` +
-                                       `<strong>Hướng dẫn khắc phục sự cố:</strong><br>` +
-                                       `• <strong>Đối với máy chủ cục bộ:</strong> Đảm bảo backend đang hoạt động (nhấp đúp tệp <strong>server.exe</strong> hoặc chạy lệnh <strong>python main.py --server</strong>) và lắng nghe trên cổng 8000.<br>` +
-                                       `• <strong>Đối với máy chủ VPS/Từ xa:</strong> Kiểm tra lại địa chỉ cấu hình máy chủ trong bảng Cài đặt (nhấp biểu tượng <strong>bánh răng</strong> ở góc trên bên phải bảng yêu cầu) và đảm bảo máy chủ VPS của bạn đã bật CORS cho phép origin Vercel.<br>` +
-                                       `• <strong>Vấn đề HTTPS / Mixed Content:</strong> Nếu truy cập Vercel qua HTTPS, trình duyệt sẽ chặn kết nối HTTP không bảo mật (Mixed Content). Hãy sử dụng địa chỉ HTTPS (qua VPS bảo mật, ngrok, hoặc localtunnel) để kết nối thành công.`;
-                    consoleOutput.appendChild(logDiv);
-                    consoleOutput.scrollTop = consoleOutput.scrollHeight;
-                }
+        eventSource.onmessage = (event) => {
+            if (!event.data) return;
+            try {
+                const data = JSON.parse(event.data);
+                handleSseMessage(data);
+            } catch (e) {
+                console.error('SSE parse error:', e);
             }
-        });
+        };
+
+        eventSource.onerror = (err) => {
+            const statusText = statStatus.textContent || '';
+            if (statusText.includes('Hoàn Thành') || statusText.includes('Bị Từ Chối') || statusText.includes('Đã tạm dừng') || statusText.includes('Thất Bại')) {
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+                return;
+            }
+            console.error('SSE EventSource error:', err);
+            clearInterval(timerInterval);
+            statStatus.textContent = 'Lỗi Kết Nối';
+            statStatus.style.color = '#ef4444';
+            runBtn.disabled  = false;
+            runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
+            if (stopBtn) stopBtn.style.display = 'none';
+
+            if (consoleOutput) {
+                const logDiv = document.createElement('div');
+                logDiv.className   = 'console-log';
+                logDiv.style.color = '#ef4444';
+                logDiv.style.marginTop = '10px';
+                logDiv.style.padding = '10px';
+                logDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+                logDiv.style.borderLeft = '4px solid #ef4444';
+                logDiv.style.borderRadius = '4px';
+                logDiv.innerHTML = `<span style="font-weight:bold;"><i class="fa-solid fa-circle-exclamation"></i> [LỖI KẾT NỐI MÁY CHỦ]</span> Không thể kết nối tới API tại <strong>${getApiPrefix()}</strong>.<br><br>` +
+                                   `<strong>Hướng dẫn khắc phục sự cố:</strong><br>` +
+                                   `• <strong>Đối với máy chủ cục bộ:</strong> Đảm bảo backend đang hoạt động (nhấp đúp tệp <strong>server.exe</strong> hoặc chạy lệnh <strong>python main.py --server</strong>) và lắng nghe trên cổng 8000.<br>` +
+                                   `• <strong>Đối với máy chủ VPS/Từ xa:</strong> Kiểm tra lại địa chỉ cấu hình máy chủ trong bảng Cài đặt (nhấp biểu tượng <strong>bánh răng</strong> ở góc trên bên phải bảng yêu cầu) và đảm bảo máy chủ VPS của bạn đã bật CORS cho phép origin Vercel.<br>` +
+                                   `• <strong>Vấn đề HTTPS / Mixed Content:</strong> Nếu truy cập Vercel qua HTTPS, trình duyệt sẽ chặn kết nối HTTP không bảo mật (Mixed Content). Hãy sử dụng địa chỉ HTTPS (qua VPS bảo mật, ngrok, hoặc localtunnel) để kết nối thành công.`;
+                consoleOutput.appendChild(logDiv);
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+        };
     });
 
     // ── Render Markdown and LaTeX (KaTeX) ──────────────────────────────────────
     function renderMarkdownReport(content) {
         if (!reportView) return;
-        reportView.innerHTML = marked.parse(content || '');
-        if (typeof renderMathInElement === 'function') {
-            try {
-                renderMathInElement(reportView, {
-                    delimiters: [
-                        {left: '$$', right: '$$', display: true},
-                        {left: '$', right: '$', display: false},
-                        {left: '\\(', right: '\\)', display: false},
-                        {left: '\\[', right: '\\]', display: true}
-                    ],
-                    throwOnError: false
-                });
-            } catch (err) {
-                console.error('KaTeX rendering error:', err);
-            }
+        if (!content) {
+            reportView.innerHTML = '';
+            return;
         }
+
+        // Protect math blocks from marked.js escaping
+        const displayMath = [];
+        const inlineMath = [];
+        let processed = content;
+
+        processed = processed.replace(/\$\$([\s\S]+?)\$\$/g, (match, math) => {
+            const placeholder = `MATHBLOCKPLACEHOLDER${displayMath.length}`;
+            displayMath.push(math);
+            return placeholder;
+        });
+
+        processed = processed.replace(/\$([^\$\n]+?)\$/g, (match, math) => {
+            const placeholder = `MATHINLINEPLACEHOLDER${inlineMath.length}`;
+            inlineMath.push(math);
+            return placeholder;
+        });
+
+        let html = marked.parse(processed);
+
+        displayMath.forEach((math, idx) => {
+            try {
+                const rendered = window.katex ? window.katex.renderToString(math, { displayMode: true, throwOnError: false }) : math;
+                html = html.replace(`MATHBLOCKPLACEHOLDER${idx}`, rendered);
+            } catch (e) {
+                html = html.replace(`MATHBLOCKPLACEHOLDER${idx}`, `<span class="text-danger">${math}</span>`);
+            }
+        });
+
+        inlineMath.forEach((math, idx) => {
+            try {
+                const rendered = window.katex ? window.katex.renderToString(math, { displayMode: false, throwOnError: false }) : math;
+                html = html.replace(`MATHINLINEPLACEHOLDER${idx}`, rendered);
+            } catch (e) {
+                html = html.replace(`MATHINLINEPLACEHOLDER${idx}`, `<span class="text-danger">${math}</span>`);
+            }
+        });
+
+        reportView.innerHTML = html;
     }
 
     // ── Display Report & Diagram Data ──────────────────────────────────────────
@@ -1699,83 +1883,62 @@ ${bodyContent}
                 consoleOutput.appendChild(reconnectLog);
                 consoleOutput.scrollTop = consoleOutput.scrollHeight;
 
-                const abortController = new AbortController();
-                window.activeFetchAbortController = abortController;
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
 
-                fetch(getApiPrefix() + `/api/run?topic=${encodeURIComponent(activeSearch.topic)}`, {
-                    signal: abortController.signal,
-                    headers: {
-                        'Accept': 'text/event-stream'
-                    }
-                })
-                .then(async response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
-                    }
-                    
-                    const reader = response.body.getReader();
-                    const decoder = new TextDecoder('utf-8');
-                    let buffer = '';
-                    
-                    while (true) {
-                        const { value, done } = await reader.read();
-                        if (done) break;
-                        
-                        buffer += decoder.decode(value, { stream: true });
-                        const lines = buffer.split('\n');
-                        buffer = lines.pop();
-                        
-                        for (const line of lines) {
-                            const cleanLine = line.trim();
-                            if (!cleanLine.startsWith('data:')) continue;
-                            
-                            const eventDataStr = cleanLine.substring(5).trim();
-                            if (!eventDataStr) continue;
-                            
-                            let data;
-                            try {
-                                data = JSON.parse(eventDataStr);
-                            } catch (e) {
-                                console.error('SSE JSON parse error:', e);
-                                continue;
-                            }
-                            
-                            handleSseMessage(data);
-                        }
-                    }
-                })
-                .catch(err => {
-                    if (err.name === 'AbortError') {
-                        return; // User cancelled
-                    }
-                    console.error('Fetch SSE error:', err);
-                    if (statStatus.textContent !== 'Hoàn Thành ✅' && statStatus.textContent !== 'Bị Từ Chối ❌' && statStatus.textContent !== 'Đã tạm dừng') {
-                        clearInterval(timerInterval);
-                        statStatus.textContent = 'Lỗi Kết Nối';
-                        statStatus.style.color = '#ef4444';
-                        runBtn.disabled  = false;
-                        runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
-                        if (stopBtn) stopBtn.style.display = 'none';
+                eventSource = new EventSource(getApiPrefix() + `/api/run?topic=${encodeURIComponent(activeSearch.topic)}`);
 
-                        if (consoleOutput) {
-                            const logDiv = document.createElement('div');
-                            logDiv.className   = 'console-log';
-                            logDiv.style.color = '#ef4444';
-                            logDiv.style.marginTop = '10px';
-                            logDiv.style.padding = '10px';
-                            logDiv.style.background = 'rgba(239, 68, 68, 0.1)';
-                            logDiv.style.borderLeft = '4px solid #ef4444';
-                            logDiv.style.borderRadius = '4px';
-                            logDiv.innerHTML = `<span style="font-weight:bold;"><i class="fa-solid fa-circle-exclamation"></i> [LỖI KẾT NỐI MÁY CHỦ]</span> Không thể kết nối tới API tại <strong>${getApiPrefix()}</strong>.<br><br>` +
-                                               `<strong>Hướng dẫn khắc phục sự cố:</strong><br>` +
-                                               `• <strong>Đối với máy chủ cục bộ:</strong> Đảm bảo backend đang hoạt động (nhấp đúp tệp <strong>server.exe</strong> hoặc chạy lệnh <strong>python main.py --server</strong>) và lắng nghe trên cổng 8000.<br>` +
-                                               `• <strong>Đối với máy chủ VPS/Từ xa:</strong> Kiểm tra lại địa chỉ cấu hình máy chủ trong bảng Cài đặt (nhấp biểu tượng <strong>bánh răng</strong> ở góc trên bên phải bảng yêu cầu) và đảm bảo máy chủ VPS của bạn đã bật CORS cho phép origin Vercel.<br>` +
-                                               `• <strong>Vấn đề HTTPS / Mixed Content:</strong> Nếu truy cập Vercel qua HTTPS, trình duyệt sẽ chặn kết nối HTTP không bảo mật (Mixed Content). Hãy sử dụng địa chỉ HTTPS (qua VPS bảo mật, ngrok, hoặc localtunnel) để kết nối thành công.`;
-                            consoleOutput.appendChild(logDiv);
-                            consoleOutput.scrollTop = consoleOutput.scrollHeight;
-                        }
+                eventSource.onmessage = (event) => {
+                    if (!event.data) return;
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleSseMessage(data);
+                    } catch (e) {
+                        console.error('SSE parse error:', e);
                     }
-                });
+                };
+
+                eventSource.onerror = (err) => {
+                    const statusText = statStatus.textContent || '';
+                    if (statusText.includes('Hoàn Thành') || statusText.includes('Bị Từ Chối') || statusText.includes('Đã tạm dừng') || statusText.includes('Thất Bại')) {
+                        if (eventSource) {
+                            eventSource.close();
+                            eventSource = null;
+                        }
+                        return;
+                    }
+                    console.error('SSE EventSource error:', err);
+                    clearInterval(timerInterval);
+                    statStatus.textContent = 'Lỗi Kết Nối';
+                    statStatus.style.color = '#ef4444';
+                    runBtn.disabled  = false;
+                    runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
+                    if (stopBtn) stopBtn.style.display = 'none';
+
+                    if (consoleOutput) {
+                        const logDiv = document.createElement('div');
+                        logDiv.className   = 'console-log';
+                        logDiv.style.color = '#ef4444';
+                        logDiv.style.marginTop = '10px';
+                        logDiv.style.padding = '10px';
+                        logDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+                        logDiv.style.borderLeft = '4px solid #ef4444';
+                        logDiv.style.borderRadius = '4px';
+                        logDiv.innerHTML = `<span style="font-weight:bold;"><i class="fa-solid fa-circle-exclamation"></i> [LỖI KẾT NỐI MÁY CHỦ]</span> Không thể kết nối tới API tại <strong>${getApiPrefix()}</strong>.<br><br>` +
+                                           `<strong>Hướng dẫn khắc phục sự cố:</strong><br>` +
+                                           `• <strong>Đối với máy chủ cục bộ:</strong> Đảm bảo backend đang hoạt động (nhấp đúp tệp <strong>server.exe</strong> hoặc chạy lệnh <strong>python main.py --server</strong>) và lắng nghe trên cổng 8000.<br>` +
+                                           `• <strong>Đối với máy chủ VPS/Từ xa:</strong> Kiểm tra lại địa chỉ cấu hình máy chủ trong bảng Cài đặt (nhấp biểu tượng <strong>bánh răng</strong> ở góc trên bên phải bảng yêu cầu) và đảm bảo máy chủ VPS của bạn đã bật CORS cho phép origin Vercel.<br>` +
+                                           `• <strong>Vấn đề HTTPS / Mixed Content:</strong> Nếu truy cập Vercel qua HTTPS, trình duyệt sẽ chặn kết nối HTTP không bảo mật (Mixed Content). Hãy sử dụng địa chỉ HTTPS (qua VPS bảo mật, ngrok, hoặc localtunnel) để kết nối thành công.`;
+                        consoleOutput.appendChild(logDiv);
+                        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                    }
+                    if (eventSource) {
+                        eventSource.close();
+                        eventSource = null;
+                    }
+                };
             }
         } catch (e) {
             console.error('Error restoring active search:', e);

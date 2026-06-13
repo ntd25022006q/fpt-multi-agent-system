@@ -800,63 +800,82 @@ body {
 
 /* ── Markdown Report ──────────────────────────────────── */
 .markdown-report {
-    line-height: 1.75;
+    line-height: 1.8;
     color: #1e293b;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    padding: 30px 35px;
+    padding: 45px 50px;
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
-    margin: 5px auto;
-    max-width: 850px;
+    border: 3px double #10b981; /* Premium double green border frame */
+    border-top: 10px solid #047857; /* Deep emerald top banner */
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    margin: 15px auto;
+    max-width: 880px;
     text-align: justify;
+    position: relative;
 }
 .markdown-report h1 {
-    font-size: 18px;
-    margin-bottom: 20px;
+    font-size: 22px;
+    margin-bottom: 25px;
     font-weight: 800;
-    border-bottom: 2px solid var(--fpt-blue);
-    padding-bottom: 8px;
-    color: var(--fpt-blue);
+    border-bottom: 3px double #047857;
+    padding-bottom: 12px;
+    color: #047857;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
     text-align: center;
 }
 .markdown-report h2 {
+    font-size: 15px;
+    margin-top: 35px;
+    margin-bottom: 18px;
+    font-weight: 700;
+    color: #064e3b;
+    border-left: 5px solid #10b981; /* Left green margin border */
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 80%, transparent 100%);
+    padding: 10px 15px;
+    border-radius: 0 8px 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.markdown-report h3 {
     font-size: 13.5px;
     margin-top: 24px;
     margin-bottom: 12px;
     font-weight: 700;
-    color: var(--fpt-navy);
-    border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 5px;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
-.markdown-report h3 {
-    font-size: 12px;
-    margin-top: 16px;
-    margin-bottom: 8px;
-    font-weight: 700;
-    color: #334155;
+    color: #0f172a;
+    border-bottom: 2px dashed #a7f3d0;
+    padding-bottom: 6px;
 }
 .markdown-report p  {
-    margin-bottom: 12px;
-    font-size: 12px;
+    margin-bottom: 14px;
+    font-size: 12.5px;
     color: #334155;
     text-align: justify;
-    line-height: 1.7;
+    line-height: 1.75;
+}
+.markdown-report blockquote {
+    background: #f0fdf4;
+    border-left: 4px solid #10b981;
+    padding: 12px 20px;
+    margin: 18px 0;
+    color: #14532d;
+    font-style: italic;
+    border-radius: 0 8px 8px 0;
+}
+.markdown-report b, .markdown-report strong {
+    color: #047857;
+    font-weight: 700;
 }
 .markdown-report ul, .markdown-report ol {
     margin-left: 20px;
-    margin-bottom: 12px;
-    font-size: 12px;
+    margin-bottom: 14px;
+    font-size: 12.5px;
     color: #334155;
 }
 .markdown-report li {
-    margin-bottom: 5px;
-    line-height: 1.65;
+    margin-bottom: 6px;
+    line-height: 1.7;
 }
 .markdown-report ul ul, .markdown-report ol ul {
     margin-left: 20px;
@@ -865,7 +884,7 @@ body {
     list-style-type: circle;
 }
 .markdown-report ul ul li, .markdown-report ol ul li {
-    font-size: 11.5px;
+    font-size: 12px;
     color: #475569;
 }
 
@@ -874,12 +893,21 @@ body {
     width: 100%;
     overflow-x: auto;
     border-collapse: collapse;
-    margin: 12px 0;
-    font-size: 11px;
+    margin: 16px 0;
+    font-size: 11.5px;
     -webkit-overflow-scrolling: touch;
 }
-.markdown-report th, .markdown-report td { border: 1px solid #cbd5e1; padding: 7px 9px; text-align: left; white-space: normal; }
+.markdown-report th, .markdown-report td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; white-space: normal; }
 .markdown-report th         { background: #f8fafc; font-weight: 700; color: var(--fpt-navy); }
+.markdown-report .katex-display {
+    background: #f8fafc !important;
+    border-left: 3px solid var(--fpt-blue) !important; /* Premium left blue border for math equations */
+    padding: 12px 16px !important;
+    margin: 16px 0 !important;
+    border-radius: 0 6px 6px 0;
+    overflow-x: auto;
+    box-shadow: inset 1px 1px 3px rgba(0,0,0,0.02);
+}
 
 .markdown-report code {
     background: #f1f5f9;
@@ -1015,4 +1043,36 @@ body {
 .hide-analysis-suffix .analysis-log-suffix {
     display: none;
 }
+
+/* Deep thinking block styling */
+.thinking-details {
+    margin-left: 12px;
+    margin-bottom: 12px;
+    border-left: 3px solid #10b981 !important; /* Premium solid green divider */
+    padding: 10px 14px !important;
+    background: rgba(16, 185, 129, 0.04) !important; /* Premium subtle green background tint */
+    border-radius: 0 8px 8px 0;
+    color: #cbd5e1; /* Clearer grey text */
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+.thinking-details[open] {
+    box-shadow: inset 2px 0 0 rgba(16, 185, 129, 0.3);
+}
+.thinking-details summary {
+    color: #10b981 !important;
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+    outline: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.thinking-details summary::-webkit-details-marker {
+    color: #10b981;
+}
+
 

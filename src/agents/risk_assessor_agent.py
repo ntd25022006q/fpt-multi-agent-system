@@ -51,7 +51,10 @@ async def risk_assessor_node(state: ResearchState, config: RunnableConfig = None
         })
         
     # Retrieve security & coding standards context to ensure secure-first assessment
-    compliance_context, compliance_citations = get_rag_context("FPT Software coding and security compliance standards")
+    import asyncio
+    compliance_context, compliance_citations = await asyncio.to_thread(
+        get_rag_context, "FPT Software coding and security compliance standards"
+    )
     
     lang = state.get("language", "vi")
     lang_instruction = (

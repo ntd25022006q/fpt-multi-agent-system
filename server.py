@@ -48,16 +48,36 @@ BYPASS_HEADERS = {
     "Bypass-Tunnel-Reminder": "true",
     "ngrok-skip-browser-warning": "true",
     "X-Accel-Buffering": "no",
+    "Cache-Control": "no-cache, no-transform",
+    "Connection": "keep-alive",
+    "Content-Encoding": "identity",
 }
 
 
 # ── Middleware: inject bypass headers on every response ───────────────────────
-@app.middleware("http")
-async def add_bypass_headers(request: Request, call_next):
-    response = await call_next(request)
-    for k, v in BYPASS_HEADERS.items():
-        response.headers[k] = v
-    return response
+class BypassHeadersMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                for k, v in BYPASS_HEADERS.items():
+                    key_bytes = k.lower().encode("utf-8")
+                    val_bytes = v.encode("utf-8")
+                    if not any(h[0] == key_bytes for h in headers):
+                        headers.append((key_bytes, val_bytes))
+                message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
+
+app.add_middleware(BypassHeadersMiddleware)
 
 
 @app.on_event("startup")
@@ -292,6 +312,10 @@ async def run_agents(topic: str):
                     
                     # Save clean report without metrics suffix as requested
                     final_report = final_state.get("report", "# No report generated").replace("***", "")
+                    
+                    # Clean internal filenames programmatically
+                    from src.utils.cleaner import clean_internal_filenames
+                    final_report = clean_internal_filenames(final_report)
                     Path(OUTPUT_DIR).mkdir(exist_ok=True)
                     (Path(OUTPUT_DIR) / "research_report.md").write_text(final_report, encoding="utf-8")
                     
@@ -300,6 +324,8 @@ async def run_agents(topic: str):
                     explanation_path = Path(OUTPUT_DIR) / "diagram_explanation.txt"
                     diagram = diagram_path.read_text(encoding="utf-8") if diagram_path.exists() else ""
                     explanation = explanation_path.read_text(encoding="utf-8") if explanation_path.exists() else ""
+                    
+                    explanation = clean_internal_filenames(explanation)
                     
                     # Yield completion with stats, report, diagram, explanation and individual token/model/speed counts
                     yield f"data: {json.dumps({'done': True, 'report': final_report, 'diagram': diagram, 'explanation': explanation, 'stats': {'time': f'{elapsed:.3f}s', 'tokens': f'{total_tokens:,}', 'agents': agents_count, 'irrelevant': final_state.get('irrelevant', False), 'agent_tokens': agent_tokens, 'agent_models': agent_models, 'agent_toks_per_sec': agent_toks_per_sec, 'agent_durations': agent_durations}}, ensure_ascii=False)}\n\n"
@@ -314,8 +340,21 @@ async def run_agents(topic: str):
                         agent_toks_per_sec[node_name] = event.get("toks_per_sec", 0.0)
                     if node_name in agent_durations:
                         agent_durations[node_name] = event.get("duration", 0.0)
+                        
+                    from src.utils.cleaner import clean_internal_filenames
+                    if event.get("content"):
+                        event["content"] = clean_internal_filenames(event["content"])
+                    if event.get("thinking"):
+                        event["thinking"] = clean_internal_filenames(event["thinking"])
+                        
                     yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
                 else:
+                    # Clean internal filenames in any other event that might have text fields
+                    from src.utils.cleaner import clean_internal_filenames
+                    if event.get("content"):
+                        event["content"] = clean_internal_filenames(event["content"])
+                    if event.get("thinking"):
+                        event["thinking"] = clean_internal_filenames(event["thinking"])
                     yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
                     
         except Exception as exc:

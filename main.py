@@ -65,7 +65,9 @@ def run_pipeline(topic: str):
         report_path = os.path.join(OUTPUT_DIR, "research_report.md")
         
         final_report = final_state.get("report", "# No report generated")
-        
+        from src.utils.cleaner import clean_internal_filenames
+        final_report = clean_internal_filenames(final_report)
+            
         # Save clean report without metrics suffix
         agents_count = 1 if final_state.get("irrelevant") else (3 if final_state.get("query_type") == "qa" else 6)
         metadata_suffix = f"""
