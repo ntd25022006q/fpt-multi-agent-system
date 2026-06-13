@@ -239,12 +239,12 @@ body {
 
 /* Download group container */
 #download-group .action-btn { display: flex; }
-#download-pdf-btn   { border-color: #fca5a5; color: #dc2626; }
-#download-pdf-btn:hover { background: #fee2e2; }
+#download-pdf-btn   { border-color: var(--fpt-orange); color: var(--fpt-orange); background: #ffffff; }
+#download-pdf-btn:hover { background: var(--fpt-orange); color: #ffffff; }
 #download-docx-btn  { border-color: #93c5fd; color: #1d4ed8; }
 #download-docx-btn:hover { background: #dbeafe; }
-#download-diagram-btn { border-color: #86efac; color: #16a034; }
-#download-diagram-btn:hover { background: #dcfce7; }
+#download-diagram-btn { border-color: var(--fpt-orange); color: var(--fpt-orange); background: #ffffff; }
+#download-diagram-btn:hover { background: var(--fpt-orange); color: #ffffff; }
 #download-md-btn    { border-color: #c4b5fd; color: #7c3aed; }
 #download-md-btn:hover { background: #ede9fe; }
 
@@ -1095,7 +1095,7 @@ body {
 /* ── Academic PDF Export styles (used by html2pdf) ── */
 .academic-pdf-export {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    color: #ea580c; /* Cam đậm FPT */
+    color: #0f172a; /* Chữ tối màu, cực kỳ rõ nét */
     background: #ffffff; /* Nền trắng */
     line-height: 1.62;
     font-size: 11pt;
@@ -1122,7 +1122,7 @@ body {
 .academic-pdf-export .pdf-header-meta {
     text-align: right;
     font-size: 9.5pt;
-    color: #ea580c;
+    color: #4b5563;
 }
 
 .academic-pdf-export h1.pdf-title {
@@ -1159,7 +1159,6 @@ body {
 .academic-pdf-export p {
     margin: 0 0 12px;
     text-indent: 24px;
-    color: #ea580c;
 }
 
 .academic-pdf-export p.no-indent, 
@@ -1172,12 +1171,10 @@ body {
 .academic-pdf-export ul, .academic-pdf-export ol {
     margin: 0 0 12px 24px;
     padding: 0;
-    color: #ea580c;
 }
 
 .academic-pdf-export li {
     margin-bottom: 4px;
-    color: #ea580c;
 }
 
 .academic-pdf-export table {
@@ -1199,16 +1196,15 @@ body {
     border-bottom: 1px solid #f97316;
     font-weight: bold;
     background: transparent;
-    color: #f97316;
+    color: #0f172a;
 }
 
 .academic-pdf-export td {
-    border-bottom: 0.5px solid #ffedd5;
-    color: #ea580c;
+    border-bottom: 0.5px solid #e2e8f0;
 }
 
 .academic-pdf-export strong, .academic-pdf-export b {
-    color: #9a3412; /* Cam đỏ rất đậm và rõ nét */
+    color: #000000; /* Chữ in đậm màu đen rõ ràng */
     font-weight: bold;
 }
 
@@ -1217,15 +1213,15 @@ body {
     padding: 4px 16px;
     margin: 12px 24px;
     font-style: italic;
-    color: #c2410c;
-    background: #fff7ed;
+    color: #334155;
+    background: #f8fafc;
     border-radius: 0 8px 8px 0;
     page-break-inside: avoid;
 }
 
 .academic-pdf-export pre {
-    background: #fff7ed;
-    border: 1px solid #ffedd5;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     padding: 10px;
     border-radius: 4px;
     overflow-x: auto;
@@ -1236,8 +1232,8 @@ body {
 }
 
 .academic-pdf-export code {
-    background: #fff7ed;
-    color: #c2410c;
+    background: #f1f5f9;
+    color: #0f172a;
     padding: 2px 4px;
     border-radius: 3px;
     font-size: 9pt;
@@ -1247,6 +1243,11 @@ body {
 .academic-pdf-export pre code {
     background: none;
     padding: 0;
+}
+
+.academic-pdf-export .katex,
+.academic-pdf-export .katex-display {
+    color: #000000 !important; /* Chữ LaTeX đen thui rõ nét */
 }
 
 .academic-pdf-export .katex-display {
