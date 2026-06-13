@@ -240,8 +240,8 @@ ${bodyContent}
 
             const tempDiv = document.createElement('div');
             tempDiv.className = 'academic-pdf-export';
-            tempDiv.style.position = 'fixed';
-            tempDiv.style.left = '0';
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.left = '-9999px';
             tempDiv.style.top = '0';
             tempDiv.style.zIndex = '-9999';
             tempDiv.style.opacity = '1';
@@ -361,17 +361,27 @@ ${bodyContent}
                     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
                 };
 
-                html2pdf().set(opt).from(tempDiv).save().then(() => {
-                    document.body.removeChild(tempDiv);
-                    downloadPdfBtn.innerHTML = origHTML;
-                    downloadPdfBtn.disabled = false;
-                }).catch(pdfErr => {
-                    console.error('html2pdf save error:', pdfErr);
-                    alert(`Lỗi tạo PDF: ${pdfErr.message}`);
-                    document.body.removeChild(tempDiv);
-                    downloadPdfBtn.innerHTML = origHTML;
-                    downloadPdfBtn.disabled = false;
-                });
+                // Force layout calculation
+                const forceReflow = tempDiv.offsetHeight;
+
+                // Delay running html2pdf to ensure browser paints and layout is ready
+                setTimeout(() => {
+                    html2pdf().set(opt).from(tempDiv).save().then(() => {
+                        if (tempDiv.parentNode) {
+                            document.body.removeChild(tempDiv);
+                        }
+                        downloadPdfBtn.innerHTML = origHTML;
+                        downloadPdfBtn.disabled = false;
+                    }).catch(pdfErr => {
+                        console.error('html2pdf save error:', pdfErr);
+                        alert(`Lỗi tạo PDF: ${pdfErr.message}`);
+                        if (tempDiv.parentNode) {
+                            document.body.removeChild(tempDiv);
+                        }
+                        downloadPdfBtn.innerHTML = origHTML;
+                        downloadPdfBtn.disabled = false;
+                    });
+                }, 150);
 
             } catch (err) {
                 console.error('PDF error:', err);
