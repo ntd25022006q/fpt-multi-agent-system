@@ -312,15 +312,15 @@ ${bodyContent}
                 <div style="margin-bottom: 20px; font-size: 32px; color: #fb923c;">
                     <i class="fa-solid fa-file-pdf fa-bounce"></i>
                 </div>
-                <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Đang kết xuất báo cáo học thuật PDF</div>
-                <div style="font-size: 13px; color: #94a3b8; max-width: 300px; line-height: 1.5;">Vui lòng đợi trong giây lát. Hệ thống đang tối ưu hóa các sơ đồ và công thức LaTeX...</div>
+                <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Đang kết xuất PDF (Định dạng Word)</div>
+                <div style="font-size: 13px; color: #94a3b8; max-width: 300px; line-height: 1.5;">Vui lòng đợi trong giây lát. Hệ thống đang chuyển đổi nội dung báo cáo sang tài liệu định dạng Word...</div>
             `;
             overlay.appendChild(spinnerWrapper);
             document.body.appendChild(overlay);
 
-            // Create tempDiv directly on the body but in the background (no fixed layout or offscreen coordinates bugs)
+            // Create tempDiv directly on the body but in the background
             const tempDiv = document.createElement('div');
-            tempDiv.className = 'academic-pdf-export';
+            tempDiv.className = 'word-style-report';
             tempDiv.style.position = 'absolute';
             tempDiv.style.left = '0';
             tempDiv.style.top = '0';
@@ -350,99 +350,10 @@ ${bodyContent}
             }, 20000); // 20-second timeout
 
             try {
-                const topic = topicInput.value.trim() || 'Báo cáo chi tiết chiến lược';
-                const dateStr = new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-                
-                // Get the report content
+                // Get the report content (exactly what is inside report-view)
                 let reportContentHTML = reportView.innerHTML;
-                
-                // Embed user uploaded diagram if present
-                let uploadHTML = '';
-                if (uploadedDiagramDataUrl) {
-                    uploadHTML = `
-                    <h2>SƠ ĐỒ QUY TRÌNH HỆ THỐNG (ẢNH TẢI LÊN)</h2>
-                    <div class="pdf-mermaid-svg" style="text-align: center;">
-                        <img src="${uploadedDiagramDataUrl}" style="max-width: 100%; max-height: 400px; border-radius: 6px; display: inline-block;">
-                    </div>`;
-                }
-                
-                // Embed automatically generated Mermaid SVG diagram if present
-                let diagramHTML = '';
-                const renderedSvg = document.querySelector('#mermaid-render-output svg');
-                if (renderedSvg) {
-                    const clonedSvg = renderedSvg.cloneNode(true);
-                    clonedSvg.style.transform = 'none';
-                    clonedSvg.style.transformOrigin = 'unset';
-                    clonedSvg.style.transition = 'none';
-                    clonedSvg.style.maxWidth = '100%';
-                    clonedSvg.style.height = 'auto';
-                    clonedSvg.style.display = 'block';
-                    clonedSvg.style.margin = '20px auto';
-                    
-                    const id = renderedSvg.getAttribute('id');
-                    clonedSvg.querySelectorAll('style').forEach(styleEl => {
-                        let cssText = styleEl.innerHTML;
-                        if (id) {
-                            cssText = cssText.replace(new RegExp('#' + id + '(?![a-zA-Z0-9_-])', 'g'), 'svg');
-                            styleEl.innerHTML = cssText;
-                        }
-                    });
-                    
-                    let w = 800;
-                    let h = 600;
-                    const viewBoxAttr = renderedSvg.getAttribute('viewBox');
-                    if (viewBoxAttr) {
-                        const parts = viewBoxAttr.split(/[\s,]+/);
-                        if (parts.length === 4) {
-                            w = parseFloat(parts[2]) || 800;
-                            h = parseFloat(parts[3]) || 600;
-                        }
-                    }
-                    clonedSvg.setAttribute('width', w);
-                    clonedSvg.setAttribute('height', h);
-                    
-                    const svgHtml = clonedSvg.outerHTML;
-                    diagramHTML = `
-                    <h2>SƠ ĐỒ LUỒNG QUY TRÌNH HỆ THỐNG</h2>
-                    <div class="pdf-mermaid-svg">
-                        ${svgHtml}
-                    </div>`;
-                }
-                
-                // Embed explanation text if present
-                let explanationHTML = '';
-                const expContent = document.getElementById('mermaid-explanation-content');
-                if (expContent && expContent.innerHTML && expContent.innerHTML.trim() !== '') {
-                    explanationHTML = `
-                    <h2>GIẢI THÍCH CHI TIẾT SƠ ĐỒ</h2>
-                    <div class="pdf-explanation">
-                        ${expContent.innerHTML}
-                    </div>`;
-                }
 
-                tempDiv.innerHTML = `
-                    <div class="pdf-header">
-                        <div>
-                            <div class="pdf-header-title">FPT Software</div>
-                            <div style="font-size: 8pt; color: #4b5563; margin-top: 2px;">Hệ Thống Báo Cáo Tri Thức Doanh Nghiệp Multi-Agent</div>
-                        </div>
-                        <div class="pdf-header-meta">
-                            ${dateStr}
-                        </div>
-                    </div>
-                    <h1 class="pdf-title">${topic}</h1>
-                    <div style="text-align: center; font-size: 10pt; color: #4b5563; margin-bottom: 30px; line-height: 1.5;">
-                        <strong>Đơn vị thực hiện:</strong> Hệ thống Multi-Agent FPT Software<br>
-                        <strong>Phát triển bởi:</strong> Nguyễn Tiến Đạt<br>
-                        <strong>Mô tả:</strong> Báo cáo nghiên cứu tích hợp sâu, tổng hợp từ 6 Tác nhân AI
-                    </div>
-                    <div class="pdf-content">
-                        ${reportContentHTML}
-                        ${uploadHTML}
-                        ${diagramHTML}
-                        ${explanationHTML}
-                    </div>
-                `;
+                tempDiv.innerHTML = reportContentHTML;
 
                 // Re-run LaTeX auto-render in the temp div to ensure math renders inside PDF
                 if (window.renderMathInElement) {
@@ -456,8 +367,8 @@ ${bodyContent}
                 }
 
                 const opt = {
-                    margin:       [15, 15, 15, 15],
-                    filename:     `FPT_BaoCao_ChiTiet_${new Date().toISOString().slice(0,10)}.pdf`,
+                    margin:       [20, 20, 20, 20], // Standard Word layout margins
+                    filename:     `BaoCao_ChiTiet_${new Date().toISOString().slice(0,10)}.pdf`,
                     image:        { type: 'jpeg', quality: 0.98 },
                     html2canvas:  { 
                         scale: 2, 
@@ -524,7 +435,135 @@ ${bodyContent}
         });
     }
 
-    // (Old DOCX listener removed to avoid errors, since the button was deleted)
+    if (downloadDocxBtn) {
+        downloadDocxBtn.addEventListener('click', () => {
+            if (!currentMarkdown || currentMarkdown.includes('not generated yet') || currentMarkdown.includes('Báo cáo chưa được tạo')) {
+                alert('Chưa có báo cáo. Vui lòng chạy quy trình trước!');
+                return;
+            }
+
+            const origHTML = downloadDocxBtn.innerHTML;
+            downloadDocxBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo Word…';
+            downloadDocxBtn.disabled = true;
+
+            try {
+                // Get the report content
+                let reportContentHTML = reportView.innerHTML;
+                
+                // Wrap in standard Word styles and document shell so Word renders tables, margins, and fonts properly
+                const wordHtml = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
+                        <title>Báo cáo chi tiết</title>
+                        <style>
+                            body {
+                                font-family: 'Times New Roman', Times, serif;
+                                font-size: 12pt;
+                                line-height: 1.5;
+                                color: #000000;
+                                margin: 1in;
+                            }
+                            h1, h2, h3, h4, h5, h6 {
+                                font-family: 'Times New Roman', Times, serif;
+                                color: #000000;
+                                font-weight: bold;
+                                margin-top: 16pt;
+                                margin-bottom: 8pt;
+                            }
+                            h1 {
+                                font-size: 18pt;
+                                text-align: center;
+                                margin-top: 20pt;
+                                margin-bottom: 12pt;
+                            }
+                            h2 {
+                                font-size: 14pt;
+                                border-bottom: 1px solid #000000;
+                                padding-bottom: 3px;
+                            }
+                            h3 {
+                                font-size: 12pt;
+                            }
+                            h4 {
+                                font-size: 11pt;
+                            }
+                            p {
+                                font-size: 12pt;
+                                margin-top: 0;
+                                margin-bottom: 10pt;
+                                text-align: justify;
+                            }
+                            table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                margin-top: 12pt;
+                                margin-bottom: 12pt;
+                            }
+                            th, td {
+                                border: 1px solid #000000;
+                                padding: 6px 8px;
+                                font-size: 11pt;
+                                vertical-align: top;
+                                word-break: break-word;
+                            }
+                            th {
+                                background-color: #f2f2f2;
+                                font-weight: bold;
+                                text-align: left;
+                            }
+                            ul, ol {
+                                margin-top: 0;
+                                margin-bottom: 10pt;
+                                padding-left: 20pt;
+                            }
+                            li {
+                                font-size: 12pt;
+                                margin-bottom: 4pt;
+                            }
+                            blockquote {
+                                margin: 10pt 0;
+                                padding-left: 15pt;
+                                border-left: 3px solid #666666;
+                                color: #333333;
+                                font-style: italic;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${reportContentHTML}
+                    </body>
+                    </html>
+                `;
+
+                // Convert HTML to docx blob
+                const converted = htmlDocx.asBlob(wordHtml);
+                
+                // Trigger download
+                const url = URL.createObjectURL(converted);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `BaoCao_ChiTiet_${new Date().toISOString().slice(0,10)}.docx`;
+                document.body.appendChild(a);
+                a.click();
+                
+                // Cleanup
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 100);
+
+                downloadDocxBtn.innerHTML = origHTML;
+                downloadDocxBtn.disabled = false;
+            } catch (err) {
+                console.error('Docx export error:', err);
+                alert(`Lỗi tạo Word: ${err.message}`);
+                downloadDocxBtn.innerHTML = origHTML;
+                downloadDocxBtn.disabled = false;
+            }
+        });
+    }
 
     // ── 3. Diagram Download (PNG via Canvas) ──────────────────────────────────
     if (downloadDiagBtn) {
