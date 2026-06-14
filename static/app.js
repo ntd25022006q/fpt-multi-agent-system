@@ -261,6 +261,10 @@ ${bodyContent}
             downloadPdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo PDF…';
             downloadPdfBtn.disabled = true;
 
+            // Save original scroll coordinates
+            const origScrollX = window.scrollX || window.pageXOffset || 0;
+            const origScrollY = window.scrollY || window.pageYOffset || 0;
+
             // Save original body and HTML constraint styles to prevent clipping
             const origBodyHeight = document.body.style.height;
             const origBodyOverflow = document.body.style.overflow;
@@ -277,43 +281,72 @@ ${bodyContent}
                 document.body.style.overflow = origBodyOverflow;
                 document.documentElement.style.height = origHtmlHeight;
                 document.documentElement.style.overflow = origHtmlOverflow;
+                window.scrollTo(origScrollX, origScrollY);
             };
 
-            const wrapper = document.createElement('div');
-            wrapper.id = 'pdf-render-wrapper';
-            wrapper.style.position = 'fixed';
-            wrapper.style.left = '0';
-            wrapper.style.top = '0';
-            wrapper.style.width = '100vw';
-            wrapper.style.height = '100vh';
-            wrapper.style.backgroundColor = '#ffffff';
-            wrapper.style.zIndex = '999999';
-            wrapper.style.overflow = 'auto';
-            wrapper.style.display = 'flex';
-            wrapper.style.flexDirection = 'column';
-            wrapper.style.alignItems = 'center';
-            wrapper.style.padding = '40px 20px';
-            wrapper.style.boxSizing = 'border-box';
+            // Scroll to the top to prevent scroll offset rendering bugs (blank pages) in html2canvas
+            window.scrollTo(0, 0);
 
-            const loadingNotice = document.createElement('div');
-            loadingNotice.style.marginBottom = '20px';
-            loadingNotice.style.textAlign = 'center';
-            loadingNotice.style.fontFamily = "'Inter', sans-serif";
-            loadingNotice.style.color = '#1e293b';
-            loadingNotice.style.fontSize = '14px';
-            loadingNotice.style.fontWeight = '600';
-            loadingNotice.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="color: #0046ff; margin-right: 8px;"></i> Đang kết xuất báo cáo học thuật bằng LaTeX và sơ đồ quy trình...';
-            wrapper.appendChild(loadingNotice);
+            // Create a gorgeous premium dark overlay to indicate progress instead of a white screen of death
+            const overlay = document.createElement('div');
+            overlay.id = 'pdf-render-overlay';
+            overlay.style.position = 'fixed';
+            overlay.style.left = '0';
+            overlay.style.top = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.backgroundColor = 'rgba(15, 23, 42, 0.75)';
+            overlay.style.backdropFilter = 'blur(6px)';
+            overlay.style.webkitBackdropFilter = 'blur(6px)';
+            overlay.style.zIndex = '999999';
+            overlay.style.display = 'flex';
+            overlay.style.flexDirection = 'column';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.fontFamily = "'Inter', sans-serif";
+            overlay.style.color = '#ffffff';
 
+            const spinnerWrapper = document.createElement('div');
+            spinnerWrapper.style.textAlign = 'center';
+            spinnerWrapper.innerHTML = `
+                <div style="margin-bottom: 20px; font-size: 32px; color: #fb923c;">
+                    <i class="fa-solid fa-file-pdf fa-bounce"></i>
+                </div>
+                <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Đang kết xuất báo cáo học thuật PDF</div>
+                <div style="font-size: 13px; color: #94a3b8; max-width: 300px; line-height: 1.5;">Vui lòng đợi trong giây lát. Hệ thống đang tối ưu hóa các sơ đồ và công thức LaTeX...</div>
+            `;
+            overlay.appendChild(spinnerWrapper);
+            document.body.appendChild(overlay);
+
+            // Create tempDiv off-screen directly on the body (no fixed layout bugs)
             const tempDiv = document.createElement('div');
             tempDiv.className = 'academic-pdf-export';
-            tempDiv.style.position = 'static';
-            tempDiv.style.width = '720px'; // 720px width yields perfect page aspect ratio for A4
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.left = '-9999px';
+            tempDiv.style.top = '0';
+            tempDiv.style.width = '720px'; // 720px width yields perfect A4 size proportions
             tempDiv.style.background = '#ffffff';
             tempDiv.style.color = '#000000';
-            wrapper.appendChild(tempDiv);
+            document.body.appendChild(tempDiv);
 
-            document.body.appendChild(wrapper);
+            let resolved = false;
+
+            // Safety timeout to clean up if html2pdf freezes
+            const timeoutId = setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    if (tempDiv.parentNode) {
+                        document.body.removeChild(tempDiv);
+                    }
+                    if (overlay.parentNode) {
+                        document.body.removeChild(overlay);
+                    }
+                    restoreBodyConstraints();
+                    downloadPdfBtn.innerHTML = origHTML;
+                    downloadPdfBtn.disabled = false;
+                    alert('Thời gian kết xuất PDF quá lâu. Đã tự động khôi phục giao diện. Vui lòng thử lại!');
+                }
+            }, 20000); // 20-second timeout
 
             try {
                 const topic = topicInput.value.trim() || 'Báo cáo chi tiết chiến lược';
@@ -345,8 +378,6 @@ ${bodyContent}
                     clonedSvg.style.display = 'block';
                     clonedSvg.style.margin = '20px auto';
                     
-                    // Strip the ID prefix (e.g. #mermaid-12345) from selectors in style blocks
-                    // to ensure styles apply correctly inside standalone SVG image document
                     const id = renderedSvg.getAttribute('id');
                     clonedSvg.querySelectorAll('style').forEach(styleEl => {
                         let cssText = styleEl.innerHTML;
@@ -356,7 +387,6 @@ ${bodyContent}
                         }
                     });
                     
-                    // Extract native viewBox dimensions
                     let w = 800;
                     let h = 600;
                     const viewBoxAttr = renderedSvg.getAttribute('viewBox');
@@ -431,10 +461,12 @@ ${bodyContent}
                     html2canvas:  { 
                         scale: 2, 
                         useCORS: true, 
-                        logging: false,
+                        logging: true,
                         letterRendering: true,
-                        scrollY: 0,
-                        scrollX: 0
+                        windowScrollX: 0,
+                        windowScrollY: 0,
+                        scrollX: 0,
+                        scrollY: 0
                     },
                     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
                 };
@@ -445,17 +477,27 @@ ${bodyContent}
                 // Delay running html2pdf to ensure browser paints and layout is ready
                 setTimeout(() => {
                     html2pdf().set(opt).from(tempDiv).save().then(() => {
-                        if (wrapper.parentNode) {
-                            document.body.removeChild(wrapper);
+                        resolved = true;
+                        clearTimeout(timeoutId);
+                        if (tempDiv.parentNode) {
+                            document.body.removeChild(tempDiv);
+                        }
+                        if (overlay.parentNode) {
+                            document.body.removeChild(overlay);
                         }
                         restoreBodyConstraints();
                         downloadPdfBtn.innerHTML = origHTML;
                         downloadPdfBtn.disabled = false;
                     }).catch(pdfErr => {
+                        resolved = true;
+                        clearTimeout(timeoutId);
                         console.error('html2pdf save error:', pdfErr);
                         alert(`Lỗi tạo PDF: ${pdfErr.message}`);
-                        if (wrapper.parentNode) {
-                            document.body.removeChild(wrapper);
+                        if (tempDiv.parentNode) {
+                            document.body.removeChild(tempDiv);
+                        }
+                        if (overlay.parentNode) {
+                            document.body.removeChild(overlay);
                         }
                         restoreBodyConstraints();
                         downloadPdfBtn.innerHTML = origHTML;
@@ -464,10 +506,15 @@ ${bodyContent}
                 }, 150);
 
             } catch (err) {
+                resolved = true;
+                clearTimeout(timeoutId);
                 console.error('PDF error:', err);
                 alert(`Lỗi tạo PDF: ${err.message}`);
-                if (wrapper.parentNode) {
-                    document.body.removeChild(wrapper);
+                if (tempDiv.parentNode) {
+                    document.body.removeChild(tempDiv);
+                }
+                if (overlay.parentNode) {
+                    document.body.removeChild(overlay);
                 }
                 restoreBodyConstraints();
                 downloadPdfBtn.innerHTML = origHTML;
