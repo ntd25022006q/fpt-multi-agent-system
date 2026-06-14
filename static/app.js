@@ -141,6 +141,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let hasCompletedSuccessfully = false;
     let sseErrorCount = 0;
     const MAX_SSE_ERRORS = 5;
+    let sseReconnectCount = 0;         // How many times SSE has reconnected mid-run
+    const MAX_SSE_RECONNECTS = 6;      // After 6 reconnect attempts, fall back to polling
+    let sseCurrentUrl = '';            // Remember the SSE URL for reconnecting
+    let sseReconnectTimer = null;      // setTimeout handle for scheduled reconnect
     let runStartTime  = null;
     let timerInterval = null;
     let pollingInterval = null;
@@ -1081,11 +1085,34 @@ ${bodyContent}
         if (!mermaidOutput) return;
         let code = (markdownOrCode || '').trim();
         
-        // Clean single-dash arrows to prevent Mermaid syntax error: e.g. "->", "->|Label|" -> "-->", "-->|Label|" in flowcharts
+        // ── Comprehensive Mermaid Sanitizer ──────────────────────────────────
+        // 1. Replace Unicode arrows used by LLMs with ASCII Mermaid arrows
+        code = code.replace(/\u2192/g, '-->');   // → 
+        code = code.replace(/\u2190/g, '<--');   // ←
+        code = code.replace(/\u27F6/g, '-->');   // ⟶
+        code = code.replace(/\u27F5/g, '<--');   // ⟵
+        code = code.replace(/\u2194/g, '<-->');  // ↔
+        code = code.replace(/\uFF0D\uFF1E/g, '-->');  // －＞ fullwidth
+        
+        // 2. Fix single-dash arrows in flowcharts
         if (code.includes('graph') || code.includes('flowchart') || code.includes('TD') || code.includes('LR')) {
             code = code.replace(/(?<!-)->(?!>)/g, '-->');
         }
-        
+
+        // 3. Sanitize parentheses & brackets inside node labels to prevent parse errors.
+        //    Pattern: NodeID[Label containing (bad) chars] or NodeID(Label)
+        //    Replace literal ( ) inside bracket node labels with harmless equivalents.
+        code = code.replace(/(\w+)\[([^\]]*)\]/g, (match, id, label) => {
+            const clean = label.replace(/\(/g, '（').replace(/\)/g, '）');
+            return `${id}["${clean.replace(/"/g, "'")}"]`;
+        });
+
+        // 4. Strip any raw HTML tags that could slip in
+        code = code.replace(/<[^>]+>/g, '');
+
+        // 5. Remove lines with only whitespace to avoid parser trips
+        code = code.split('\n').map(l => l.trimEnd()).filter(l => l.length > 0).join('\n');
+
         let hasMermaidBlock = false;
         if (code.includes('```mermaid')) {
             const regex = /```mermaid\s*([\s\S]*?)\s*```/;
@@ -1696,6 +1723,73 @@ ${bodyContent}
         }
     }
 
+    // ── SSE Connection Helper (supports auto-reconnect with exponential backoff) ──
+    function connectSse(url) {
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
+        if (sseReconnectTimer) {
+            clearTimeout(sseReconnectTimer);
+            sseReconnectTimer = null;
+        }
+        sseCurrentUrl = url;
+        eventSource = new EventSource(url);
+
+        eventSource.onmessage = (event) => {
+            sseErrorCount = 0;
+            sseReconnectCount = 0; // successful message = reset reconnect counter
+            if (!event.data) return;
+            try {
+                const data = JSON.parse(event.data);
+                handleSseMessage(data);
+            } catch (e) {
+                console.error('SSE parse error:', e);
+            }
+        };
+
+        eventSource.onerror = (err) => {
+            // Case 1: Already completed — close cleanly, no action
+            if (hasCompletedSuccessfully) {
+                if (eventSource) { eventSource.close(); eventSource = null; }
+                return;
+            }
+
+            // Case 2: Status already shows a final state — close cleanly
+            const statusText = statStatus.textContent || '';
+            if (statusText.includes('Hoàn Thành') || statusText.includes('Bị Từ Chối') ||
+                statusText.includes('Đã tạm dừng') || statusText.includes('Thất Bại')) {
+                if (eventSource) { eventSource.close(); eventSource = null; }
+                return;
+            }
+
+            // Case 3: SSE dropped mid-run — attempt auto-reconnect with backoff
+            if (eventSource) { eventSource.close(); eventSource = null; }
+
+            sseReconnectCount++;
+            if (sseReconnectCount <= MAX_SSE_RECONNECTS) {
+                // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 32s
+                const delay = Math.min(1000 * Math.pow(2, sseReconnectCount - 1), 32000);
+                console.warn(`SSE dropped (attempt ${sseReconnectCount}/${MAX_SSE_RECONNECTS}), reconnecting in ${delay}ms...`);
+                // Show a subtle reconnecting indicator (not the alarming orange banner)
+                if (statStatus) {
+                    statStatus.textContent = `Đang kết nối lại (${sseReconnectCount})…`;
+                    statStatus.style.color = '#f59e0b';
+                }
+                sseReconnectTimer = setTimeout(() => {
+                    if (!hasCompletedSuccessfully) {
+                        connectSse(sseCurrentUrl);
+                    }
+                }, delay);
+                return;
+            }
+
+            // Case 4: Too many reconnect attempts — fall back to polling
+            console.error('SSE reconnect exhausted, switching to polling...');
+            startPollingForReport();
+        };
+    }
+
     runBtn.addEventListener('click', () => {
         const topic = topicInput.value.trim();
         if (!topic) { alert('Vui lòng nhập câu hỏi hoặc chủ đề nghiên cứu trước khi kích hoạt!'); return; }
@@ -1708,6 +1802,8 @@ ${bodyContent}
         resetUI();
         hasCompletedSuccessfully = false;
         sseErrorCount = 0;
+        sseReconnectCount = 0;
+        if (sseReconnectTimer) { clearTimeout(sseReconnectTimer); sseReconnectTimer = null; }
         if (pollingInterval) {
             clearInterval(pollingInterval);
             pollingInterval = null;
@@ -1729,91 +1825,15 @@ ${bodyContent}
             }
         }, 50);
 
-        if (eventSource) {
-            eventSource.close();
-            eventSource = null;
-        }
-
         const ollamaKey = ollamaKeyInput ? ollamaKeyInput.value.trim() : '';
         const openrouterKey = openrouterKeyInput ? openrouterKeyInput.value.trim() : '';
         let url = getApiPrefix() + `/api/run?topic=${encodeURIComponent(topic)}`;
         if (ollamaKey) url += `&ollama_api_key=${encodeURIComponent(ollamaKey)}`;
         if (openrouterKey) url += `&openrouter_api_key=${encodeURIComponent(openrouterKey)}`;
 
-        eventSource = new EventSource(url);
-
-        eventSource.onmessage = (event) => {
-            sseErrorCount = 0;
-            if (!event.data) return;
-            try {
-                const data = JSON.parse(event.data);
-                handleSseMessage(data);
-            } catch (e) {
-                console.error('SSE parse error:', e);
-            }
-        };
-
-        eventSource.onerror = (err) => {
-            if (hasCompletedSuccessfully) {
-                if (eventSource) {
-                    eventSource.close();
-                    eventSource = null;
-                }
-                return;
-            }
-            const statusText = statStatus.textContent || '';
-            if (statusText.includes('Hoàn Thành') || statusText.includes('Bị Từ Chối') || statusText.includes('Đã tạm dừng') || statusText.includes('Thất Bại')) {
-                if (eventSource) {
-                    eventSource.close();
-                    eventSource = null;
-                }
-                return;
-            }
-
-            // If processing has already started (at least one node activated), switch to polling
-            if (activeStream && activeStream.node) {
-                console.warn('SSE connection closed during run. Starting background report polling...');
-                if (eventSource) {
-                    eventSource.close();
-                    eventSource = null;
-                }
-                startPollingForReport();
-                return;
-            }
-
-            // Otherwise, it is a startup connection failure
-            console.error('SSE EventSource startup error:', err);
-            if (eventSource) {
-                eventSource.close();
-                eventSource = null;
-            }
-            clearInterval(timerInterval);
-            statStatus.textContent = 'Lỗi Kết Nối';
-            statStatus.style.color = '#ef4444';
-            runBtn.disabled  = false;
-            runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
-            if (stopBtn) stopBtn.style.display = 'none';
-
-            if (consoleOutput) {
-                const logDiv = document.createElement('div');
-                logDiv.className   = 'console-log';
-                logDiv.style.color = '#ef4444';
-                logDiv.style.marginTop = '10px';
-                logDiv.style.padding = '10px';
-                logDiv.style.background = 'rgba(239, 68, 68, 0.1)';
-                logDiv.style.borderLeft = '4px solid #ef4444';
-                logDiv.style.borderRadius = '4px';
-                logDiv.innerHTML = `<span style="font-weight:bold;"><i class="fa-solid fa-circle-exclamation"></i> [LỖI KẾT NỐI MÁY CHỦ]</span> Không thể kết nối tới API tại <strong>${getApiPrefix()}</strong>.<br><br>` +
-                                   `<strong>Hướng dẫn khắc phục sự cố:</strong><br>` +
-                                   `• <strong>Máy chủ đang khởi động (Render free tier):</strong> Vui lòng chờ 30-50 giây để máy chủ thức dậy sau thời gian ngủ đông.<br>` +
-                                   `• <strong>Đối với máy chủ cục bộ:</strong> Đảm bảo backend đang hoạt động (nhấp đúp tệp <strong>server.exe</strong> hoặc chạy lệnh <strong>python main.py --server</strong>) và lắng nghe trên cổng 8000.<br>` +
-                                   `• <strong>Đối với máy chủ VPS/Từ xa:</strong> Kiểm tra lại địa chỉ cấu hình máy chủ trong bảng Cài đặt (nhấp biểu tượng <strong>bánh răng</strong> ở góc trên bên phải bảng yêu cầu) và đảm bảo máy chủ VPS của bạn đã bật CORS cho phép origin Vercel.<br>` +
-                                   `• <strong>Vấn đề HTTPS / Mixed Content:</strong> Nếu truy cập Vercel qua HTTPS, trình duyệt sẽ chặn kết nối HTTP không bảo mật (Mixed Content). Hãy sử dụng địa chỉ HTTPS (qua VPS bảo mật, ngrok, hoặc localtunnel) để kết nối thành công.`;
-                consoleOutput.appendChild(logDiv);
-                consoleOutput.scrollTop = consoleOutput.scrollHeight;
-            }
-        };
+        connectSse(url);
     });
+
 
     function throttledRenderMarkdownReport(content) {
         pendingReportContent = content;
@@ -2421,6 +2441,8 @@ ${bodyContent}
 
                 hasCompletedSuccessfully = false;
                 sseErrorCount = 0;
+                sseReconnectCount = 0;
+                if (sseReconnectTimer) { clearTimeout(sseReconnectTimer); sseReconnectTimer = null; }
                 if (eventSource) {
                     eventSource.close();
                     eventSource = null;
@@ -2432,79 +2454,7 @@ ${bodyContent}
                 if (ollamaKey) url += `&ollama_api_key=${encodeURIComponent(ollamaKey)}`;
                 if (openrouterKey) url += `&openrouter_api_key=${encodeURIComponent(openrouterKey)}`;
 
-                eventSource = new EventSource(url);
-
-                eventSource.onmessage = (event) => {
-                    sseErrorCount = 0;
-                    if (!event.data) return;
-                    try {
-                        const data = JSON.parse(event.data);
-                        handleSseMessage(data);
-                    } catch (e) {
-                        console.error('SSE parse error:', e);
-                    }
-                };
-
-                eventSource.onerror = (err) => {
-                    if (hasCompletedSuccessfully) {
-                        if (eventSource) {
-                            eventSource.close();
-                            eventSource = null;
-                        }
-                        return;
-                    }
-                    const statusText = statStatus.textContent || '';
-                    if (statusText.includes('Hoàn Thành') || statusText.includes('Bị Từ Chối') || statusText.includes('Đã tạm dừng') || statusText.includes('Thất Bại')) {
-                        if (eventSource) {
-                            eventSource.close();
-                            eventSource = null;
-                        }
-                        return;
-                    }
-
-                    // If processing has already started, switch to polling
-                    if (activeSearch && activeSearch.stats) {
-                        console.warn('SSE connection closed during run restoration. Starting background report polling...');
-                        if (eventSource) {
-                            eventSource.close();
-                            eventSource = null;
-                        }
-                        startPollingForReport();
-                        return;
-                    }
-
-                    // Otherwise, it is a startup connection failure
-                    console.error('SSE EventSource startup error:', err);
-                    if (eventSource) {
-                        eventSource.close();
-                        eventSource = null;
-                    }
-                    clearInterval(timerInterval);
-                    statStatus.textContent = 'Lỗi Kết Nối';
-                    statStatus.style.color = '#ef4444';
-                    runBtn.disabled  = false;
-                    runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
-                    if (stopBtn) stopBtn.style.display = 'none';
-
-                    if (consoleOutput) {
-                        const logDiv = document.createElement('div');
-                        logDiv.className   = 'console-log';
-                        logDiv.style.color = '#ef4444';
-                        logDiv.style.marginTop = '10px';
-                        logDiv.style.padding = '10px';
-                        logDiv.style.background = 'rgba(239, 68, 68, 0.1)';
-                        logDiv.style.borderLeft = '4px solid #ef4444';
-                        logDiv.style.borderRadius = '4px';
-                        logDiv.innerHTML = `<span style="font-weight:bold;"><i class="fa-solid fa-circle-exclamation"></i> [LỖI KẾT NỐI MÁY CHỦ]</span> Không thể kết nối tới API tại <strong>${getApiPrefix()}</strong>.<br><br>` +
-                                           `<strong>Hướng dẫn khắc phục sự cố:</strong><br>` +
-                                           `• <strong>Máy chủ đang khởi động (Render free tier):</strong> Vui lòng chờ 30-50 giây để máy chủ thức dậy sau thời gian ngủ đông.<br>` +
-                                           `• <strong>Đối với máy chủ cục bộ:</strong> Đảm bảo backend đang hoạt động (nhấp đúp tệp <strong>server.exe</strong> hoặc chạy lệnh <strong>python main.py --server</strong>) và lắng nghe trên cổng 8000.<br>` +
-                                           `• <strong>Đối với máy chủ VPS/Từ xa:</strong> Kiểm tra lại địa chỉ cấu hình máy chủ trong bảng Cài đặt (nhấp biểu tượng <strong>bánh răng</strong> ở góc trên bên phải bảng yêu cầu) và đảm bảo máy chủ VPS của bạn đã bật CORS cho phép origin Vercel.<br>` +
-                                           `• <strong>Vấn đề HTTPS / Mixed Content:</strong> Nếu truy cập Vercel qua HTTPS, trình duyệt sẽ chặn kết nối HTTP không bảo mật (Mixed Content). Hãy sử dụng địa chỉ HTTPS (qua VPS bảo mật, ngrok, hoặc localtunnel) để kết nối thành công.`;
-                        consoleOutput.appendChild(logDiv);
-                        consoleOutput.scrollTop = consoleOutput.scrollHeight;
-                    }
-                };
+                connectSse(url);
             }
         } catch (e) {
             console.error('Error restoring active search:', e);
