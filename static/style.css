@@ -903,16 +903,31 @@ body {
 .markdown-report table {
     display: table;
     width: 100%;
-    overflow-x: auto;
+    table-layout: fixed;
     border-collapse: collapse;
     margin: 20px 0;
-    font-size: 12px;
+    font-size: 12.5px;
     border-top: 2px solid #000000;
     border-bottom: 2px solid #000000;
+    word-wrap: break-word;
 }
-.markdown-report th, .markdown-report td { border: none; padding: 8px 12px; text-align: left; white-space: normal; }
+.markdown-report th, .markdown-report td { 
+    border: none; 
+    padding: 8px 12px; 
+    text-align: left; 
+    white-space: normal; 
+    word-wrap: break-word;
+    word-break: break-word;
+}
 .markdown-report th         { border-bottom: 1px solid #000000; font-weight: 700; color: #000000; background: transparent; }
 .markdown-report td         { border-bottom: 0.5px solid #e5e7eb; color: #000000; }
+
+/* Custom proportional widths for 5-column tables in markdown-report */
+.markdown-report table th:first-child:nth-last-child(5) { width: 8%; }
+.markdown-report table th:nth-child(2):nth-last-child(4) { width: 17%; }
+.markdown-report table th:nth-child(3):nth-last-child(3) { width: 10%; }
+.markdown-report table th:nth-child(4):nth-last-child(2) { width: 30%; }
+.markdown-report table th:nth-child(5):nth-last-child(1) { width: 35%; }
 
 .markdown-report .katex-display {
     background: transparent !important;
@@ -1229,6 +1244,7 @@ body {
 
 .academic-pdf-export table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     margin: 18px 0;
     page-break-inside: avoid;
@@ -1240,6 +1256,9 @@ body {
     padding: 6px 10px;
     font-size: 10pt;
     text-align: left;
+    white-space: normal;
+    word-wrap: break-word;
+    word-break: break-word;
 }
 
 .academic-pdf-export th {
@@ -1252,6 +1271,14 @@ body {
 .academic-pdf-export td {
     border-bottom: 0.5px solid #e2e8f0;
 }
+
+/* Custom proportional widths for 5-column tables in academic-pdf-export */
+.academic-pdf-export table th:first-child:nth-last-child(5) { width: 8%; }
+.academic-pdf-export table th:nth-child(2):nth-last-child(4) { width: 17%; }
+.academic-pdf-export table th:nth-child(3):nth-last-child(3) { width: 10%; }
+.academic-pdf-export table th:nth-child(4):nth-last-child(2) { width: 30%; }
+.academic-pdf-export table th:nth-child(5):nth-last-child(1) { width: 35%; }
+
 
 .academic-pdf-export strong, .academic-pdf-export b {
     color: #000000; /* Chữ in đậm màu đen rõ ràng */
