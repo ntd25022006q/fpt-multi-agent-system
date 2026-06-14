@@ -1222,6 +1222,11 @@ ${bodyContent}
         if (!mermaidOutput) return;
         let code = (markdownOrCode || '').trim();
         
+        // Clean single-dash arrows to prevent Mermaid syntax error: e.g. "->", "->|Label|" -> "-->", "-->|Label|" in flowcharts
+        if (code.includes('graph') || code.includes('flowchart') || code.includes('TD') || code.includes('LR')) {
+            code = code.replace(/(?<!-)->(?!>)/g, '-->');
+        }
+        
         let hasMermaidBlock = false;
         if (code.includes('```mermaid')) {
             const regex = /```mermaid\s*([\s\S]*?)\s*```/;

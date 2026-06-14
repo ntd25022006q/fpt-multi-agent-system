@@ -1273,11 +1273,11 @@ body {
 }
 
 /* Custom proportional widths for 5-column tables in academic-pdf-export */
-.academic-pdf-export table th:first-child:nth-last-child(5) { width: 8%; }
-.academic-pdf-export table th:nth-child(2):nth-last-child(4) { width: 17%; }
-.academic-pdf-export table th:nth-child(3):nth-last-child(3) { width: 10%; }
-.academic-pdf-export table th:nth-child(4):nth-last-child(2) { width: 30%; }
-.academic-pdf-export table th:nth-child(5):nth-last-child(1) { width: 35%; }
+.academic-pdf-export table th:first-child:nth-last-child(5) { width: 20%; }
+.academic-pdf-export table th:nth-child(2):nth-last-child(4) { width: 25%; }
+.academic-pdf-export table th:nth-child(3):nth-last-child(3) { width: 12%; }
+.academic-pdf-export table th:nth-child(4):nth-last-child(2) { width: 20%; }
+.academic-pdf-export table th:nth-child(5):nth-last-child(1) { width: 23%; }
 
 .academic-pdf-export strong, .academic-pdf-export b {
     color: #000000; /* Chữ in đậm màu đen rõ ràng */
