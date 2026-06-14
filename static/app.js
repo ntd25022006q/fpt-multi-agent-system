@@ -193,26 +193,26 @@ document.addEventListener('DOMContentLoaded', () => {
 @page { size: A4; margin: 20mm 18mm 24mm 18mm; }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Segoe UI',Arial,sans-serif;font-size:10.5pt;color:#1a202c;line-height:1.7;}
-.hdr{border-bottom:3px solid #0054a6;padding-bottom:10px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-end;}
-.hdr .co{font-size:14pt;font-weight:800;color:#0054a6;}
+.hdr{border-bottom:3px solid #0f172a;padding-bottom:10px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-end;}
+.hdr .co{font-size:14pt;font-weight:800;color:#0f172a;}
 .hdr .dp{font-size:9pt;color:#6b7a90;margin-top:2px;}
 .hdr .mt{text-align:right;font-size:9pt;color:#6b7a90;line-height:1.5;}
-h1{font-size:17pt;font-weight:800;color:#0f172a;border-bottom:2px solid #0054a6;padding-bottom:5px;margin:16px 0 10px;page-break-after:avoid;}
-h2{font-size:12.5pt;font-weight:700;color:#0054a6;margin:16px 0 6px;border-bottom:1px solid #e2e8f0;padding-bottom:2px;page-break-after:avoid;}
-h3{font-size:10.5pt;font-weight:700;color:#1e3a5f;margin:12px 0 4px;page-break-after:avoid;}
+h1{font-size:17pt;font-weight:800;color:#0f172a;border-bottom:2px solid #0f172a;padding-bottom:5px;margin:16px 0 10px;page-break-after:avoid;}
+h2{font-size:12.5pt;font-weight:700;color:#0f172a;margin:16px 0 6px;border-bottom:1px solid #e2e8f0;padding-bottom:2px;page-break-after:avoid;}
+h3{font-size:10.5pt;font-weight:700;color:#1e293b;margin:12px 0 4px;page-break-after:avoid;}
 p{margin-bottom:7px;color:#2d3748;}
 ul,ol{margin:4px 0 8px 18px;color:#2d3748;}
 li{margin-bottom:2px;}
 table{width:100%;border-collapse:collapse;margin:10px 0 14px;font-size:9pt;page-break-inside:avoid;}
-thead th{background:#1e3a5f;color:#fff;font-weight:700;padding:6px 8px;border:1px solid #1e3a5f;}
+thead th{background:#0f172a;color:#fff;font-weight:700;padding:6px 8px;border:1px solid #0f172a;}
 tbody td{border:1px solid #cbd5e1;padding:5px 8px;vertical-align:top;}
 tbody tr:nth-child(even) td{background:#f8fafc;}
-code{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:3px;padding:1px 4px;font-family:'Courier New',monospace;font-size:8pt;color:#1e3a5f;}
+code{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:3px;padding:1px 4px;font-family:'Courier New',monospace;font-size:8pt;color:#1e293b;}
 pre{background:#0f172a;border-radius:4px;padding:10px 12px;margin:8px 0;page-break-inside:avoid;}
 pre code{background:none;border:none;color:#e2e8f0;font-size:7.5pt;padding:0;}
-a{color:#0054a6;}
+a{color:#0f172a;}
 hr{border:none;border-top:1px solid #e2e8f0;margin:14px 0;}
-blockquote{border-left:3px solid #0054a6;padding:4px 10px;margin:8px 0;background:#eff6ff;font-style:italic;color:#334155;}
+blockquote{border-left:3px solid #0f172a;padding:4px 10px;margin:8px 0;background:#f8fafc;font-style:italic;color:#334155;}
 em{font-style:italic;}strong{font-weight:700;}
 @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}h1,h2,h3{page-break-after:avoid;}table,pre{page-break-inside:avoid;}}
 </style>
@@ -237,6 +237,24 @@ ${bodyContent}
             const origHTML = downloadPdfBtn.innerHTML;
             downloadPdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo PDF…';
             downloadPdfBtn.disabled = true;
+
+            // Save original body and HTML constraint styles to prevent clipping
+            const origBodyHeight = document.body.style.height;
+            const origBodyOverflow = document.body.style.overflow;
+            const origHtmlHeight = document.documentElement.style.height;
+            const origHtmlOverflow = document.documentElement.style.overflow;
+
+            document.body.style.height = 'auto';
+            document.body.style.overflow = 'visible';
+            document.documentElement.style.height = 'auto';
+            document.documentElement.style.overflow = 'visible';
+
+            const restoreBodyConstraints = () => {
+                document.body.style.height = origBodyHeight;
+                document.body.style.overflow = origBodyOverflow;
+                document.documentElement.style.height = origHtmlHeight;
+                document.documentElement.style.overflow = origHtmlOverflow;
+            };
 
             const tempDiv = document.createElement('div');
             tempDiv.className = 'academic-pdf-export';
@@ -271,7 +289,6 @@ ${bodyContent}
                 const renderedSvg = document.querySelector('#mermaid-render-output svg');
                 if (renderedSvg) {
                     const clonedSvg = renderedSvg.cloneNode(true);
-                    // Keep ID to preserve scoped styles inside <style>
                     clonedSvg.style.transform = 'none';
                     clonedSvg.style.transformOrigin = 'unset';
                     clonedSvg.style.transition = 'none';
@@ -279,6 +296,17 @@ ${bodyContent}
                     clonedSvg.style.height = 'auto';
                     clonedSvg.style.display = 'block';
                     clonedSvg.style.margin = '20px auto';
+                    
+                    // Strip the ID prefix (e.g. #mermaid-12345) from selectors in style blocks
+                    // to ensure styles apply correctly inside standalone SVG image document
+                    const id = renderedSvg.getAttribute('id');
+                    clonedSvg.querySelectorAll('style').forEach(styleEl => {
+                        let cssText = styleEl.innerHTML;
+                        if (id) {
+                            cssText = cssText.replace(new RegExp('#' + id + '(?![a-zA-Z0-9_-])', 'g'), 'svg');
+                            styleEl.innerHTML = cssText;
+                        }
+                    });
                     
                     // Extract native viewBox dimensions
                     let w = 800;
@@ -356,7 +384,9 @@ ${bodyContent}
                         scale: 2, 
                         useCORS: true, 
                         logging: false,
-                        letterRendering: true
+                        letterRendering: true,
+                        scrollY: 0,
+                        scrollX: 0
                     },
                     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
                 };
@@ -370,6 +400,7 @@ ${bodyContent}
                         if (tempDiv.parentNode) {
                             document.body.removeChild(tempDiv);
                         }
+                        restoreBodyConstraints();
                         downloadPdfBtn.innerHTML = origHTML;
                         downloadPdfBtn.disabled = false;
                     }).catch(pdfErr => {
@@ -378,6 +409,7 @@ ${bodyContent}
                         if (tempDiv.parentNode) {
                             document.body.removeChild(tempDiv);
                         }
+                        restoreBodyConstraints();
                         downloadPdfBtn.innerHTML = origHTML;
                         downloadPdfBtn.disabled = false;
                     });
@@ -389,6 +421,7 @@ ${bodyContent}
                 if (tempDiv.parentNode) {
                     document.body.removeChild(tempDiv);
                 }
+                restoreBodyConstraints();
                 downloadPdfBtn.innerHTML = origHTML;
                 downloadPdfBtn.disabled = false;
             }
@@ -429,7 +462,17 @@ ${bodyContent}
                 cloned.style.transform = 'none';
                 cloned.style.transformOrigin = 'unset';
                 cloned.style.transition = 'none';
-                // Keep ID to preserve scoped styles inside <style>
+                
+                // Strip the ID prefix (e.g. #mermaid-12345) from selectors in style blocks
+                // to make sure styles resolve correctly inside the standalone SVG image document
+                const id = svgEl.getAttribute('id');
+                cloned.querySelectorAll('style').forEach(styleEl => {
+                    let cssText = styleEl.innerHTML;
+                    if (id) {
+                        cssText = cssText.replace(new RegExp('#' + id + '(?![a-zA-Z0-9_-])', 'g'), 'svg');
+                        styleEl.innerHTML = cssText;
+                    }
+                });
 
                 // Extract native dimensions from viewBox
                 let w = 800;
@@ -1318,31 +1361,33 @@ ${bodyContent}
             if (data.node === activeStream.node) {
                 activeStream.rawText += data.token;
                 const rawText = activeStream.rawText;
+                const rawTextUpper = rawText.toUpperCase();
+                const tokenUpper = data.token.toUpperCase();
                 
                 // Track transitions between THINKING, CONSOLE MESSAGE, DETAILED REPORT, MERMAID DIAGRAM and DIAGRAM EXPLANATION sections (both English and Vietnamese)
-                const hasThinkingMarker = rawText.includes('=== THINKING ===') || 
-                                          rawText.includes('=== QUÁ TRÌNH TƯ DUY ===') || 
-                                          rawText.includes('=== SUY NGHĨ ===') || 
-                                          rawText.includes('=== TƯ DUY ===');
+                const hasThinkingMarker = rawTextUpper.includes('=== THINKING ===') || 
+                                          rawTextUpper.includes('=== QUÁ TRÌNH TƯ DUY ===') || 
+                                          rawTextUpper.includes('=== SUY NGHĨ ===') || 
+                                          rawTextUpper.includes('=== TƯ DUY ===');
                 if (hasThinkingMarker && activeStream.section === 'none') {
                     activeStream.section = 'thinking';
                     activeStream.thinkingDetailsEl.style.display = 'block';
                 }
                 
-                const hasConsoleMarker = rawText.includes('=== CONSOLE MESSAGE ===') || 
-                                         rawText.includes('=== THÔNG BÁO CONSOLE ===') || 
-                                         rawText.includes('=== NHẬT KÝ CONSOLE ===') || 
-                                         rawText.includes('=== TÓM TẮT CONSOLE ===') || 
-                                         rawText.includes('=== NHẬT KÝ ===') || 
-                                         rawText.includes('=== TÓM TẮT ===');
+                const hasConsoleMarker = rawTextUpper.includes('=== CONSOLE MESSAGE ===') || 
+                                         rawTextUpper.includes('=== THÔNG BÁO CONSOLE ===') || 
+                                         rawTextUpper.includes('=== NHẬT KÝ CONSOLE ===') || 
+                                         rawTextUpper.includes('=== TÓM TẮT CONSOLE ===') || 
+                                         rawTextUpper.includes('=== NHẬT KÝ ===') || 
+                                         rawTextUpper.includes('=== TÓM TẮT ===');
                 if (hasConsoleMarker && activeStream.section !== 'content' && activeStream.section !== 'report' && activeStream.section !== 'diagram' && activeStream.section !== 'explanation') {
                     activeStream.section = 'content';
                 }
 
-                const hasReportMarker = rawText.includes('=== DETAILED REPORT ===') || 
-                                        rawText.includes('=== BÁO CÁO CHI TIẾT ===') || 
-                                        rawText.includes('=== BÁO CÁO CỤ THỂ ===') || 
-                                        rawText.includes('=== BÁO CÁO ===');
+                const hasReportMarker = rawTextUpper.includes('=== DETAILED REPORT ===') || 
+                                        rawTextUpper.includes('=== BÁO CÁO CHI TIẾT ===') || 
+                                        rawTextUpper.includes('=== BÁO CÁO CỤ THỂ ===') || 
+                                        rawTextUpper.includes('=== BÁO CÁO ===');
                 if (hasReportMarker && activeStream.section !== 'report' && activeStream.section !== 'diagram' && activeStream.section !== 'explanation') {
                     activeStream.section = 'report';
                     // Programmatically switch to the Report tab when report starts streaming!
@@ -1352,7 +1397,7 @@ ${bodyContent}
                     }
                 }
 
-                if ((rawText.includes('=== MERMAID DIAGRAM ===') || rawText.includes('=== SƠ ĐỒ MERMAID ===') || rawText.includes('=== BIỂU ĐỒ MERMAID ===')) && activeStream.section !== 'diagram' && activeStream.section !== 'explanation') {
+                if ((rawTextUpper.includes('=== MERMAID DIAGRAM ===') || rawTextUpper.includes('=== SƠ ĐỒ MERMAID ===') || rawTextUpper.includes('=== BIỂU ĐỒ MERMAID ===')) && activeStream.section !== 'diagram' && activeStream.section !== 'explanation') {
                     activeStream.section = 'diagram';
                     // Programmatically switch to the Diagram tab when diagram starts streaming!
                     const diagramTabBtn = document.getElementById('tab-btn-diagram');
@@ -1361,7 +1406,7 @@ ${bodyContent}
                     }
                 }
 
-                if ((rawText.includes('=== DIAGRAM EXPLANATION ===') || rawText.includes('=== GIẢI THÍCH CHI TIẾT SƠ ĐỒ ===') || rawText.includes('=== GIẢI THÍCH SƠ ĐỒ ===') || rawText.includes('=== GIẢI THÍCH ===')) && activeStream.section !== 'explanation') {
+                if ((rawTextUpper.includes('=== DIAGRAM EXPLANATION ===') || rawTextUpper.includes('=== GIẢI THÍCH CHI TIẾT SƠ ĐỒ ===') || rawTextUpper.includes('=== GIẢI THÍCH SƠ ĐỒ ===') || rawTextUpper.includes('=== GIẢI THÍCH ===')) && activeStream.section !== 'explanation') {
                     activeStream.section = 'explanation';
                 }
                 
@@ -1376,7 +1421,7 @@ ${bodyContent}
                             { key: '=== TƯ DUY ===', len: 14 }
                         ];
                         for (const m of markers) {
-                            const found = rawText.indexOf(m.key);
+                            const found = rawTextUpper.indexOf(m.key);
                             if (found !== -1 && (idx === -1 || found < idx)) {
                                 idx = found;
                                 offset = m.len;
@@ -1390,7 +1435,7 @@ ${bodyContent}
                             return;
                         }
                     }
-                    if (!data.token.includes('===') && !data.token.includes('CONSOLE') && !data.token.includes('THÔNG BÁO') && !data.token.includes('NHẬT KÝ') && !data.token.includes('TÓM TẮT')) {
+                    if (!tokenUpper.includes('===') && !tokenUpper.includes('CONSOLE') && !tokenUpper.includes('THÔNG BÁO') && !tokenUpper.includes('NHẬT KÝ') && !tokenUpper.includes('TÓM TẮT')) {
                         activeStream.thinkingText += data.token;
                         activeStream.thinkingContentEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.thinkingText));
                     }
@@ -1407,7 +1452,7 @@ ${bodyContent}
                             { key: '=== TÓM TẮT ===', len: 15 }
                         ];
                         for (const m of markers) {
-                            const found = rawText.indexOf(m.key);
+                            const found = rawTextUpper.indexOf(m.key);
                             if (found !== -1 && (idx === -1 || found < idx)) {
                                 idx = found;
                                 offset = m.len;
@@ -1421,7 +1466,7 @@ ${bodyContent}
                             return;
                         }
                     }
-                    if (!data.token.includes('===') && !data.token.includes('DETAILED') && !data.token.includes('BÁO CÁO')) {
+                    if (!tokenUpper.includes('===') && !tokenUpper.includes('DETAILED') && !tokenUpper.includes('BÁO CÁO')) {
                         activeStream.contentText += data.token;
                         activeStream.logBodyEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.contentText));
                     }
@@ -1436,7 +1481,7 @@ ${bodyContent}
                             { key: '=== BÁO CÁO ===', len: 15 }
                         ];
                         for (const m of markers) {
-                            const found = rawText.indexOf(m.key);
+                            const found = rawTextUpper.indexOf(m.key);
                             if (found !== -1 && (idx === -1 || found < idx)) {
                                 idx = found;
                                 offset = m.len;
@@ -1449,7 +1494,7 @@ ${bodyContent}
                             activeStream.reportText = '';
                         }
                     } else {
-                        if (!data.token.includes('===') && !data.token.includes('MERMAID') && !data.token.includes('SƠ ĐỒ') && !data.token.includes('BIỂU ĐỒ')) {
+                        if (!tokenUpper.includes('===') && !tokenUpper.includes('MERMAID') && !tokenUpper.includes('SƠ ĐỒ') && !tokenUpper.includes('BIỂU ĐỒ')) {
                             activeStream.reportText += data.token;
                         }
                     }
@@ -1461,18 +1506,18 @@ ${bodyContent}
                     }
                 } else if (activeStream.section === 'diagram') {
                     if (!activeStream.diagramText) {
-                        const idx = Math.max(rawText.indexOf('=== MERMAID DIAGRAM ==='), rawText.indexOf('=== SƠ ĐỒ MERMAID ==='), rawText.indexOf('=== BIỂU ĐỒ MERMAID ==='));
+                        const idx = Math.max(rawTextUpper.indexOf('=== MERMAID DIAGRAM ==='), rawTextUpper.indexOf('=== SƠ ĐỒ MERMAID ==='), rawTextUpper.indexOf('=== BIỂU ĐỒ MERMAID ==='));
                         if (idx !== -1) {
                             let offset = 23;
-                            if (rawText.includes('=== SƠ ĐỒ MERMAID ===')) offset = 21;
-                            else if (rawText.includes('=== BIỂU ĐỒ MERMAID ===')) offset = 23;
+                            if (rawTextUpper.includes('=== SƠ ĐỒ MERMAID ===')) offset = 21;
+                            else if (rawTextUpper.includes('=== BIỂU ĐỒ MERMAID ===')) offset = 23;
                             const after = rawText.substring(idx + offset);
                             activeStream.diagramText = after;
                         } else {
                             activeStream.diagramText = '';
                         }
                     } else {
-                        if (!data.token.includes('===') && !data.token.includes('DIAGRAM') && !data.token.includes('GIẢI THÍCH')) {
+                        if (!tokenUpper.includes('===') && !tokenUpper.includes('DIAGRAM') && !tokenUpper.includes('GIẢI THÍCH')) {
                             activeStream.diagramText += data.token;
                         }
                     }
@@ -1486,23 +1531,23 @@ ${bodyContent}
                 } else if (activeStream.section === 'explanation') {
                     if (!activeStream.explanationText) {
                         const idx = Math.max(
-                            rawText.indexOf('=== DIAGRAM EXPLANATION ==='),
-                            rawText.indexOf('=== GIẢI THÍCH CHI TIẾT SƠ ĐỒ ==='),
-                            rawText.indexOf('=== GIẢI THÍCH SƠ ĐỒ ==='),
-                            rawText.indexOf('=== GIẢI THÍCH ===')
+                            rawTextUpper.indexOf('=== DIAGRAM EXPLANATION ==='),
+                            rawTextUpper.indexOf('=== GIẢI THÍCH CHI TIẾT SƠ ĐỒ ==='),
+                            rawTextUpper.indexOf('=== GIẢI THÍCH SƠ ĐỒ ==='),
+                            rawTextUpper.indexOf('=== GIẢI THÍCH ===')
                         );
                         if (idx !== -1) {
                             let offset = 27;
-                            if (rawText.includes('=== GIẢI THÍCH CHI TIẾT SƠ ĐỒ ===')) offset = 33;
-                            else if (rawText.includes('=== GIẢI THÍCH SƠ ĐỒ ===')) offset = 24;
-                            else if (rawText.includes('=== GIẢI THÍCH ===')) offset = 18;
+                            if (rawTextUpper.includes('=== GIẢI THÍCH CHI TIẾT SƠ ĐỒ ===')) offset = 33;
+                            else if (rawTextUpper.includes('=== GIẢI THÍCH SƠ ĐỒ ===')) offset = 24;
+                            else if (rawTextUpper.includes('=== GIẢI THÍCH ===')) offset = 18;
                             const after = rawText.substring(idx + offset);
                             activeStream.explanationText = after;
                         } else {
                             activeStream.explanationText = '';
                         }
                     } else {
-                        if (!data.token.includes('===')) {
+                        if (!tokenUpper.includes('===')) {
                             activeStream.explanationText += data.token;
                         }
                     }
@@ -1759,20 +1804,21 @@ ${bodyContent}
         let reportText = cleanReportContent(rawReport);
 
         // Robust Fallback Parser if standard section markers are missing
-        const hasMarkers = rawReport.includes('=== DETAILED REPORT ===') || 
-                           rawReport.includes('=== BÁO CÁO CHI TIẾT ===') ||
-                           rawReport.includes('=== BÁO CÁO CỤ THỂ ===') ||
-                           rawReport.includes('=== BÁO CÁO ===') ||
-                           rawReport.includes('=== CONSOLE MESSAGE ===') || 
-                           rawReport.includes('=== THÔNG BÁO CONSOLE ===') ||
-                           rawReport.includes('=== NHẬT KÝ CONSOLE ===') ||
-                           rawReport.includes('=== TÓM TẮT CONSOLE ===') ||
-                           rawReport.includes('=== NHẬT KÝ ===') ||
-                           rawReport.includes('=== TÓM TẮT ===') ||
-                           rawReport.includes('=== THINKING ===') ||
-                           rawReport.includes('=== SUY NGHĨ ===') ||
-                           rawReport.includes('=== QUÁ TRÌNH TƯ DUY ===') ||
-                           rawReport.includes('=== TƯ DUY ===');
+        const rawReportUpper = rawReport.toUpperCase();
+        const hasMarkers = rawReportUpper.includes('=== DETAILED REPORT ===') || 
+                           rawReportUpper.includes('=== BÁO CÁO CHI TIẾT ===') ||
+                           rawReportUpper.includes('=== BÁO CÁO CỤ THỂ ===') ||
+                           rawReportUpper.includes('=== BÁO CÁO ===') ||
+                           rawReportUpper.includes('=== CONSOLE MESSAGE ===') || 
+                           rawReportUpper.includes('=== THÔNG BÁO CONSOLE ===') ||
+                           rawReportUpper.includes('=== NHẬT KÝ CONSOLE ===') ||
+                           rawReportUpper.includes('=== TÓM TẮT CONSOLE ===') ||
+                           rawReportUpper.includes('=== NHẬT KÝ ===') ||
+                           rawReportUpper.includes('=== TÓM TẮT ===') ||
+                           rawReportUpper.includes('=== THINKING ===') ||
+                           rawReportUpper.includes('=== SUY NGHĨ ===') ||
+                           rawReportUpper.includes('=== QUÁ TRÌNH TƯ DUY ===') ||
+                           rawReportUpper.includes('=== TƯ DUY ===');
 
         if (!hasMarkers) {
             if (rawReport.includes('```mermaid')) {

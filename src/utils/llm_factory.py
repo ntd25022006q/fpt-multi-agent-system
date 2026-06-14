@@ -222,9 +222,10 @@ def parse_agent_json(content: str, fallback_key: str) -> dict:
         ("diagram_explanation", explanation_markers)
     ]
     
+    content_lower = content.lower()
     for key, markers in markers_map:
         for marker in markers:
-            idx = content.find(marker)
+            idx = content_lower.find(marker.lower())
             if idx != -1:
                 matches.append((idx, idx + len(marker), key))
                 

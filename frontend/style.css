@@ -838,6 +838,28 @@ body {
     font-weight: 600;
     color: #1e293b;
 }
+.markdown-report h4 {
+    font-size: 14px;
+    margin-top: 18px;
+    margin-bottom: 10px;
+    font-weight: 700;
+    color: #334155;
+}
+.markdown-report h5 {
+    font-size: 13px;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    font-weight: 700;
+    color: #475569;
+}
+.markdown-report h6 {
+    font-size: 13px;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-style: italic;
+    color: #64748b;
+}
 .markdown-report p  {
     margin-bottom: 14px;
     font-size: 14.2px;
@@ -1135,7 +1157,7 @@ body {
     color: #000000;
 }
 
-.academic-pdf-export > h2 {
+.academic-pdf-export h2 {
     font-size: 14pt;
     font-weight: bold;
     margin-top: 25px;
@@ -1150,9 +1172,37 @@ body {
 .academic-pdf-export h3 {
     font-size: 12pt;
     font-weight: bold;
-    color: #0f172a;
+    color: #1e293b;
     margin-top: 18px;
     margin-bottom: 8px;
+    page-break-after: avoid;
+}
+
+.academic-pdf-export h4 {
+    font-size: 11pt;
+    font-weight: bold;
+    color: #334155;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+}
+
+.academic-pdf-export h5 {
+    font-size: 10.5pt;
+    font-weight: bold;
+    color: #475569;
+    margin-top: 12px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+}
+
+.academic-pdf-export h6 {
+    font-size: 10pt;
+    font-weight: bold;
+    font-style: italic;
+    color: #64748b;
+    margin-top: 10px;
+    margin-bottom: 4px;
     page-break-after: avoid;
 }
 

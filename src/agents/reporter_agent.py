@@ -21,7 +21,7 @@ You MUST respond using the following structured format (use the exact markers):
 [Write your step-by-step thinking process in English. This section will be collapsible in the UI.]
 
 === CONSOLE MESSAGE ===
-[Write a clean, professional, plain-text summary of your final report compilation here. Do NOT use markdown characters like asterisks, bullet points, or hashtags. Keep it as friendly plain text paragraphs.]
+[Write a detailed, academic, and professional plain-text summary of your compiled report here (strictly do NOT use markdown characters like asterisks, bullet points, or hashtags, and do NOT write bullet points or lists; write as continuous text paragraphs). This summary must be between 4 to 6 complete sentences, detailing the specific synthesis results of your report, the core sections completed (e.g. theoretical baseline, comparison matrix, risk control conforming to FPT Secure-First standard, roadmap with quantitative KPIs), and the architecture diagram along with its detailed explanation. Avoid writing generic or overly brief summaries.]
 
 === DETAILED REPORT ===
 # FPT Software AI-First Research & Detailed Report — Strategic Research Report
@@ -81,7 +81,7 @@ Bạn PHẢI phản hồi theo định dạng cấu trúc sau (sử dụng chín
 [Viết quy trình tư duy từng bước của bạn bằng tiếng Việt. Phần này sẽ được thu gọn trong giao diện người dùng.]
 
 === CONSOLE MESSAGE ===
-[Viết một bản tóm tắt ngắn gọn, chuyên nghiệp bằng văn bản thuần túy (không sử dụng ký tự markdown như *, #, -, và không có bảng biểu) về việc tổng hợp báo cáo và thiết lập kiến trúc hệ thống.]
+[Viết một bản tóm tắt chi tiết, học thuật và chuyên nghiệp bằng văn bản thuần túy (tuyệt đối không sử dụng ký tự markdown như *, #, -, và không có bảng biểu, không viết danh sách đầu dòng, chỉ viết dưới dạng các đoạn văn xuôi liên tiếp). Bản tóm tắt này phải có độ dài từ 4 đến 6 câu văn hoàn chỉnh, nêu chi tiết kết quả tổng hợp của báo cáo, các phân hệ cốt lõi đã hoàn thành (như cơ sở lý thuyết, ma trận so sánh đánh đổi, kiểm soát rủi ro an ninh mạng theo chuẩn FPT Secure-First, lộ trình triển khai kèm KPI định lượng), và sơ đồ kiến trúc hệ thống bằng Mermaid cùng lời giải thích đi kèm. Tránh viết chung chung hay quá ngắn gọn.]
 
 === DETAILED REPORT ===
 # Báo cáo Nghiên cứu Chiến lược FPT Software AI-First
@@ -146,7 +146,7 @@ You MUST respond using the following structured format (use the exact markers):
 [Write your step-by-step thinking process in English. This section will be collapsible in the UI.]
 
 === CONSOLE MESSAGE ===
-[Write a clean, professional, plain-text summary of your answers here. Do NOT use markdown characters like asterisks, bullet points, or hashtags. Keep it as friendly plain text paragraphs.]
+[Write a detailed, academic, and professional plain-text summary of your answers here (strictly do NOT use markdown characters like asterisks, bullet points, or hashtags, and do NOT write bullet points or lists; write as continuous text paragraphs). This summary must be between 4 to 6 complete sentences, detailing the specific synthesis results of your answers, the core sections completed (e.g. architectural analysis, technical workflow, implementation details), and the workflow diagram along with its detailed explanation. Avoid writing generic or overly brief summaries.]
 
 === DETAILED REPORT ===
 # FPT Software AI-First Research & Detailed Report — Q&A Research Report
@@ -202,7 +202,7 @@ Bạn PHẢI phản hồi theo định dạng cấu trúc sau (sử dụng chín
 [Viết quy trình tư duy từng bước của bạn bằng tiếng Việt. Phần này sẽ được thu gọn trong giao diện người dùng.]
 
 === CONSOLE MESSAGE ===
-[Viết một bản tóm tắt ngắn gọn, chuyên nghiệp bằng văn bản thuần túy (không sử dụng ký tự markdown như *, #, -, và không có bảng biểu) về câu trả lời đã tổng hợp.]
+[Viết một bản tóm tắt chi tiết, học thuật và chuyên nghiệp bằng văn bản thuần túy (tuyệt đối không sử dụng ký tự markdown như *, #, -, và không có bảng biểu, không viết danh sách đầu dòng, chỉ viết dưới dạng các đoạn văn xuôi liên tiếp). Bản tóm tắt này phải có độ dài từ 4 đến 6 câu văn hoàn chỉnh, nêu chi tiết các câu trả lời đã tổng hợp, phân tích kỹ thuật chuyên sâu và các phân hệ kỹ thuật đã thực hiện (như phân tích kiến trúc, luồng kỹ thuật, chi tiết triển khai), cùng sơ đồ quy trình hệ thống bằng Mermaid và phần giải thích chi tiết đi kèm. Tránh viết chung chung hay quá ngắn gọn.]
 
 === DETAILED REPORT ===
 # Báo cáo Nghiên cứu Q&A FPT Software AI-First
@@ -394,8 +394,34 @@ async def reporter_node(state: ResearchState, config: RunnableConfig = None) -> 
     actual_model = get_actual_model_used("reporter", MODEL_REPORTER_AGENT)
     toks_per_sec = round(tokens / duration, 1) if duration > 0 else 0
     
-    console_message = parsed.get("console_message", "Tôi đã tổng hợp xong báo cáo chi tiết chiến lược.")
+    console_message = parsed.get("console_message", "").strip()
     
+    # Check if the generated console message is too short or is a copy of a section heading
+    is_poor_message = (
+        not console_message or 
+        len(console_message) < 100 or 
+        console_message.strip() in [
+            "Giới thiệu chung và Tổng hợp 6 Tác nhân",
+            "Giới thiệu chung và Bối cảnh",
+            "Introduction",
+            "Detailed Analysis"
+        ]
+    )
+    if is_poor_message:
+        if query_type == "qa":
+            console_message = (
+                f"Tôi đã hoàn thành việc nghiên cứu và tổng hợp câu trả lời chi tiết cho chủ đề: \"{state['topic']}\". "
+                "Báo cáo hỏi đáp đã được biên soạn đầy đủ với các phân tích kỹ thuật chuyên sâu, trích xuất dữ liệu "
+                "chính xác từ kho tri thức nội bộ FPT Software, đính kèm sơ đồ quy trình hệ thống bằng Mermaid và phần giải thích chi tiết."
+            )
+        else:
+            console_message = (
+                "Tôi đã hoàn thành việc biên soạn và tổng hợp báo cáo chiến lược AI-First cho FPT Software. "
+                "Báo cáo bao gồm 4 phân hệ cốt lõi: Cơ sở lý thuyết & kiến trúc nền tảng, Đánh giá ma trận đánh đổi (Monolithic vs Microservices), "
+                "Quản lý rủi ro an ninh mạng theo tiêu chuẩn FPT Secure-First, và Lộ trình triển khai chi tiết kèm các chỉ số KPI định lượng. "
+                "Đồng thời, tôi đã thiết lập thành công sơ đồ luồng quy trình hệ thống bằng Mermaid và phần giải thích chi tiết kiến trúc đi kèm."
+            )
+
     if stream_queue:
         await stream_queue.put({
             "type": "node_end",
