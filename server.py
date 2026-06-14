@@ -307,7 +307,13 @@ async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: s
 
         try:
             while True:
-                event = await stream_queue.get()
+                try:
+                    event = await asyncio.wait_for(stream_queue.get(), timeout=10.0)
+                except asyncio.TimeoutError:
+                    # Send an SSE keep-alive comment to prevent router/load-balancer timeouts
+                    yield ": ping\n\n"
+                    continue
+
                 if event.get("type") == "done_sentinel":
                     break
                 elif event.get("type") == "error":

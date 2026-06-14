@@ -143,6 +143,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const MAX_SSE_ERRORS = 5;
     let runStartTime  = null;
     let timerInterval = null;
+    let pollingInterval = null;
+    let pollCount = 0;
+    const MAX_POLLS = 100; // Poll for 5 minutes
 
     // Typewriter queue
     let printQueue = [];
@@ -918,7 +921,7 @@ ${bodyContent}
 
     function stripMarkdown(text) {
         if (!text) return '';
-        return text
+        let cleaned = text
             .replace(/\*\*([^*]+)\*\*/g, '$1')
             .replace(/\*([^*]+)\*/g, '$1')
             .replace(/`([^`]+)`/g, '$1')
@@ -928,8 +931,21 @@ ${bodyContent}
             .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
             .replace(/&nbsp;/g, ' ')
             .replace(/_{2,}/g, '')
-            .replace(/\*{2,}/g, '')
-            .trim();
+            .replace(/\*{2,}/g, '');
+
+        // Hide marker lines and section names like CONSOLE MESSAGE, DETAILED REPORT, etc.
+        cleaned = cleaned
+            .replace(/===?\s*(THINKING|QUÁ TRÌNH TƯ DUY|SUY NGHĨ|TƯ DUY)\s*===?/gi, '')
+            .replace(/===?\s*(CONSOLE MESSAGE|THÔNG BÁO CONSOLE|NHẬT KÝ CONSOLE|TÓM TẮT CONSOLE|NHẬT KÝ|TÓM TẮT)\s*===?/gi, '')
+            .replace(/===?\s*(DETAILED REPORT|BÁO CÁO CHI TIẾT|BÁO CÁO CỤ THỂ|BÁO CÁO)\s*===?/gi, '')
+            .replace(/===?\s*(DIAGRAM EXPLANATION|GIẢI THÍCH CHI TIẾT SƠ ĐỒ|GIẢI THÍCH SƠ ĐỒ|GIẢI THÍCH)\s*===?/gi, '')
+            .replace(/===?\s*(MERMAID DIAGRAM|SƠ ĐỒ MERMAID|BIỂU ĐỒ MERMAID)\s*===?/gi, '')
+            .replace(/^\s*[-*=]{3,}\s*$/gm, '') // Lines containing only --- or ===
+            .replace(/^\s*(THINKING|CONSOLE MESSAGE|DETAILED REPORT|DIAGRAM EXPLANATION|MERMAID DIAGRAM)\s*$/gim, '')
+            .replace(/^\s*(QUÁ TRÌNH TƯ DUY|SUY NGHĨ|TƯ DUY|THÔNG BÁO CONSOLE|NHẬT KÝ CONSOLE|TÓM TẮT CONSOLE|NHẬT KÝ|TÓM TẮT)\s*$/gim, '')
+            .replace(/^\s*(BÁO CÁO CHI TIẾT|BÁO CÁO CỤ THỂ|BÁO CÁO|GIẢI THÍCH CHI TIẾT SƠ ĐỒ|GIẢI THÍCH SƠ ĐỒ|GIẢI THÍCH|SƠ ĐỒ MERMAID|BIỂU ĐỒ MERMAID)\s*$/gim, '');
+
+        return cleaned.trim();
     }
 
     const FILENAME_MAP = {
@@ -1233,6 +1249,68 @@ ${bodyContent}
         }
     }
 
+    function startPollingForReport() {
+        if (pollingInterval) clearInterval(pollingInterval);
+        
+        statStatus.textContent = 'Đang nhận kết quả…';
+        statStatus.style.color = 'var(--fpt-orange)';
+        
+        if (consoleOutput) {
+            const logDiv = document.createElement('div');
+            logDiv.className = 'console-log';
+            logDiv.style.cssText = 'color: var(--fpt-orange); font-style: italic; margin-top: 10px; padding: 10px; background: rgba(217, 119, 6, 0.08); border-left: 4px solid var(--fpt-orange); border-radius: 4px;';
+            logDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Kết nối tạm thời bị gián đoạn. Tiến trình phân tích của các Tác nhân vẫn đang tiếp tục chạy ngầm trên máy chủ, hệ thống đang đồng bộ để lấy báo cáo...';
+            consoleOutput.appendChild(logDiv);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        pollCount = 0;
+        pollingInterval = setInterval(() => {
+            pollCount++;
+            if (pollCount > MAX_POLLS) {
+                clearInterval(pollingInterval);
+                statStatus.textContent = 'Hết hạn kết nối';
+                statStatus.style.color = '#ef4444';
+                runBtn.disabled = false;
+                runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
+                if (stopBtn) stopBtn.style.display = 'none';
+                return;
+            }
+
+            fetch(getApiPrefix() + '/api/report?t=' + Date.now())
+                .then(res => { if (!res.ok) throw new Error(); return res.json(); })
+                .then(data => {
+                    if (data.report && !data.report.includes('Báo cáo chưa được tạo') && data.report.trim().length > 100) {
+                        clearInterval(pollingInterval);
+                        hasCompletedSuccessfully = true;
+                        statStatus.textContent = 'Hoàn Thành ✅';
+                        statStatus.style.color = '#16a069';
+                        runBtn.disabled = false;
+                        runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
+                        if (stopBtn) stopBtn.style.display = 'none';
+                        
+                        displayReportData(data);
+                        
+                        document.querySelectorAll('.graph-node').forEach(n => {
+                            if (!n.classList.contains('node-hidden')) {
+                                n.classList.remove('active');
+                                n.classList.add('completed');
+                            }
+                        });
+                        document.querySelectorAll('.graph-edges line').forEach(l => {
+                            if (!l.classList.contains('edge-hidden')) {
+                                l.classList.add('active');
+                            }
+                        });
+                        localStorage.removeItem('fpt_active_search');
+                    }
+                })
+                .catch(e => {
+                    console.warn('Polling status, retrying...', e);
+                });
+        }, 3000);
+    }
+
     // ── Run Pipeline ─────────────────────────────────────────────────────────
     function handleSseMessage(data) {
         if (data.error) {
@@ -1353,6 +1431,25 @@ ${bodyContent}
             else if (nk === 'risk_assessor') titleColor = 'var(--accent-risk)';
             else if (nk === 'recommender')  titleColor = 'var(--accent-recommender)';
             else if (nk === 'reporter')     titleColor = 'var(--accent-reporter)';
+
+            // Add a beautiful transition notice in console Output
+            let transitionMsg = '';
+            if (nk === 'researcher')      transitionMsg = '<i class="fa-solid fa-arrow-right-long" style="margin-right: 6px;"></i> Đang chuyển tiếp yêu cầu đến các Tác nhân Nghiên cứu...';
+            else if (nk === 'analyst')    transitionMsg = '<i class="fa-solid fa-arrow-right-long" style="margin-right: 6px;"></i> Đang chuyển tiếp yêu cầu đến Tác nhân Phân tích...';
+            else if (nk === 'risk_assessor') transitionMsg = '<i class="fa-solid fa-arrow-right-long" style="margin-right: 6px;"></i> Đang chuyển tiếp yêu cầu đến Tác nhân Kiểm soát Rủi ro...';
+            else if (nk === 'recommender') transitionMsg = '<i class="fa-solid fa-arrow-right-long" style="margin-right: 6px;"></i> Đang chuyển tiếp yêu cầu đến Tác nhân Đề xuất Chiến lược...';
+            else if (nk === 'reporter')    transitionMsg = '<i class="fa-solid fa-arrow-right-long" style="margin-right: 6px;"></i> Đang chuyển tiếp yêu cầu đến Tác nhân Biên soạn Báo cáo...';
+
+            if (transitionMsg) {
+                const welcome = consoleOutput.querySelector('.console-welcome');
+                if (welcome) consoleOutput.innerHTML = '';
+                
+                const transDiv = document.createElement('div');
+                transDiv.className = 'console-log';
+                transDiv.style.cssText = 'color: #94a3b8; font-style: italic; font-size: 11.5px; margin: 8px 0; border-top: 1px dashed rgba(255,255,255,0.05); padding-top: 8px;';
+                transDiv.innerHTML = transitionMsg;
+                consoleOutput.appendChild(transDiv);
+            }
 
             // Clean welcome panel if it exists
             const welcome = consoleOutput.querySelector('.console-welcome');
@@ -1668,6 +1765,10 @@ ${bodyContent}
         resetUI();
         hasCompletedSuccessfully = false;
         sseErrorCount = 0;
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
         runBtn.disabled  = true;
         runBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang chạy…';
         if (stopBtn) stopBtn.style.display = 'block';
@@ -1726,16 +1827,23 @@ ${bodyContent}
                 return;
             }
 
-            console.warn(`SSE connection issue (attempt ${sseErrorCount + 1}/${MAX_SSE_ERRORS})`);
-            sseErrorCount++;
-
-            if (sseErrorCount < MAX_SSE_ERRORS) {
-                statStatus.textContent = 'Đang kết nối lại…';
-                statStatus.style.color = 'var(--fpt-orange)';
+            // If processing has already started (at least one node activated), switch to polling
+            if (activeStream && activeStream.node) {
+                console.warn('SSE connection closed during run. Starting background report polling...');
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+                startPollingForReport();
                 return;
             }
 
-            console.error('SSE EventSource error:', err);
+            // Otherwise, it is a startup connection failure
+            console.error('SSE EventSource startup error:', err);
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
             clearInterval(timerInterval);
             statStatus.textContent = 'Lỗi Kết Nối';
             statStatus.style.color = '#ef4444';
@@ -1760,10 +1868,6 @@ ${bodyContent}
                                    `• <strong>Vấn đề HTTPS / Mixed Content:</strong> Nếu truy cập Vercel qua HTTPS, trình duyệt sẽ chặn kết nối HTTP không bảo mật (Mixed Content). Hãy sử dụng địa chỉ HTTPS (qua VPS bảo mật, ngrok, hoặc localtunnel) để kết nối thành công.`;
                 consoleOutput.appendChild(logDiv);
                 consoleOutput.scrollTop = consoleOutput.scrollHeight;
-            }
-            if (eventSource) {
-                eventSource.close();
-                eventSource = null;
             }
         };
     });
@@ -2375,16 +2479,23 @@ ${bodyContent}
                         return;
                     }
 
-                    console.warn(`SSE reconnect issue (attempt ${sseErrorCount + 1}/${MAX_SSE_ERRORS})`);
-                    sseErrorCount++;
-
-                    if (sseErrorCount < MAX_SSE_ERRORS) {
-                        statStatus.textContent = 'Đang kết nối lại…';
-                        statStatus.style.color = 'var(--fpt-orange)';
+                    // If processing has already started, switch to polling
+                    if (activeSearch && activeSearch.stats) {
+                        console.warn('SSE connection closed during run restoration. Starting background report polling...');
+                        if (eventSource) {
+                            eventSource.close();
+                            eventSource = null;
+                        }
+                        startPollingForReport();
                         return;
                     }
 
-                    console.error('SSE EventSource error:', err);
+                    // Otherwise, it is a startup connection failure
+                    console.error('SSE EventSource startup error:', err);
+                    if (eventSource) {
+                        eventSource.close();
+                        eventSource = null;
+                    }
                     clearInterval(timerInterval);
                     statStatus.textContent = 'Lỗi Kết Nối';
                     statStatus.style.color = '#ef4444';
@@ -2409,10 +2520,6 @@ ${bodyContent}
                                            `• <strong>Vấn đề HTTPS / Mixed Content:</strong> Nếu truy cập Vercel qua HTTPS, trình duyệt sẽ chặn kết nối HTTP không bảo mật (Mixed Content). Hãy sử dụng địa chỉ HTTPS (qua VPS bảo mật, ngrok, hoặc localtunnel) để kết nối thành công.`;
                         consoleOutput.appendChild(logDiv);
                         consoleOutput.scrollTop = consoleOutput.scrollHeight;
-                    }
-                    if (eventSource) {
-                        eventSource.close();
-                        eventSource = null;
                     }
                 };
             }
