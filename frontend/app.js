@@ -146,6 +146,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let pollingInterval = null;
     let pollCount = 0;
     const MAX_POLLS = 100; // Poll for 5 minutes
+    let renderTimeout = null;
+    let pendingReportContent = null;
+    let expRenderTimeout = null;
+    let pendingExpContent = null;
 
     // Typewriter queue
     let printQueue = [];
@@ -796,6 +800,16 @@ ${bodyContent}
         isPrinting = false;
 
         uploadedDiagramDataUrl = null;
+        if (renderTimeout) {
+            clearTimeout(renderTimeout);
+            renderTimeout = null;
+        }
+        if (expRenderTimeout) {
+            clearTimeout(expRenderTimeout);
+            expRenderTimeout = null;
+        }
+        pendingReportContent = null;
+        pendingExpContent = null;
         if (chatUploadStatusText) {
             chatUploadStatusText.textContent = '';
             chatUploadStatusText.style.display = 'none';
@@ -1650,7 +1664,7 @@ ${bodyContent}
                         const cleanedReportText = cleanInternalFilenames(activeStream.reportText.replace(/={2,}/g, '').replace(/\*\*\*/g, ''));
                         currentMarkdown = cleanedReportText;
                         if (rawMarkdownText) rawMarkdownText.value = cleanedReportText;
-                        renderMarkdownReport(cleanedReportText);
+                        throttledRenderMarkdownReport(cleanedReportText);
                     }
                 } else if (activeStream.section === 'diagram') {
                     if (!activeStream.diagramText) {
@@ -1700,13 +1714,7 @@ ${bodyContent}
                         }
                     }
                     if (activeStream.explanationText) {
-                        const expContainer = document.getElementById('mermaid-explanation-container');
-                        const expContent = document.getElementById('mermaid-explanation-content');
-                        if (expContainer && expContent) {
-                            const cleanedExplanation = cleanInternalFilenames(activeStream.explanationText.replace(/={2,}/g, ''));
-                            expContent.innerHTML = marked.parse(cleanedExplanation);
-                            expContainer.style.display = 'block';
-                        }
+                        throttledRenderExplanation(activeStream.explanationText);
                     }
                 }
                 consoleOutput.scrollTop = consoleOutput.scrollHeight;
@@ -1871,6 +1879,36 @@ ${bodyContent}
             }
         };
     });
+
+    function throttledRenderMarkdownReport(content) {
+        pendingReportContent = content;
+        if (renderTimeout) return;
+        
+        renderTimeout = setTimeout(() => {
+            renderTimeout = null;
+            if (pendingReportContent !== null) {
+                renderMarkdownReport(pendingReportContent);
+            }
+        }, 300);
+    }
+
+    function throttledRenderExplanation(content) {
+        pendingExpContent = content;
+        if (expRenderTimeout) return;
+
+        expRenderTimeout = setTimeout(() => {
+            expRenderTimeout = null;
+            if (pendingExpContent !== null) {
+                const expContainer = document.getElementById('mermaid-explanation-container');
+                const expContent = document.getElementById('mermaid-explanation-content');
+                if (expContainer && expContent) {
+                    const cleanedExplanation = cleanInternalFilenames(pendingExpContent.replace(/={2,}/g, ''));
+                    expContent.innerHTML = marked.parse(cleanedExplanation);
+                    expContainer.style.display = 'block';
+                }
+            }
+        }, 300);
+    }
 
     // ── Render Markdown and LaTeX (KaTeX) ──────────────────────────────────────
     function renderMarkdownReport(content) {
