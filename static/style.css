@@ -813,6 +813,7 @@ body {
     width: 100%;
     box-sizing: border-box;
     position: relative;
+    overflow-x: hidden;
 }
 .markdown-report h1 {
     font-size: 22px;
@@ -900,15 +901,25 @@ body {
     color: #1e293b; /* Rõ nét hơn */
 }
 
+/* Table scroll wrapper — prevents wide tables from overflowing the report frame */
+.markdown-report .table-scroll-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 20px 0;
+    border-top: 2px solid #000000;
+    border-bottom: 2px solid #000000;
+}
+
 .markdown-report table {
     display: table;
     width: 100%;
+    min-width: 100%;
     table-layout: auto;
     border-collapse: collapse;
-    margin: 20px 0;
+    margin: 0;
     font-size: 12.5px;
-    border-top: 2px solid #000000;
-    border-bottom: 2px solid #000000;
+    border-top: none;
+    border-bottom: none;
     word-wrap: normal;
 }
 .markdown-report th, .markdown-report td { 
@@ -919,6 +930,7 @@ body {
     word-wrap: normal;
     word-break: normal;
     overflow-wrap: break-word;
+    min-width: 80px;
 }
 .markdown-report th         { border-bottom: 1px solid #000000; font-weight: 700; color: #000000; background: transparent; }
 .markdown-report td         { border-bottom: 0.5px solid #e5e7eb; color: #000000; }

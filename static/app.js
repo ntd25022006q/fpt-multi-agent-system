@@ -1455,6 +1455,23 @@ ${bodyContent}
                                          rawTextUpper.includes('=== NHẬT KÝ ===') || 
                                          rawTextUpper.includes('=== TÓM TẮT ===');
                 if (hasConsoleMarker && activeStream.section !== 'content' && activeStream.section !== 'report' && activeStream.section !== 'diagram' && activeStream.section !== 'explanation') {
+                    // Truncate thinkingText at the console marker so thinking block doesn't show console content
+                    const consoleMarkersList = ['=== CONSOLE MESSAGE ===','=== THÔNG BÁO CONSOLE ===','=== NHẬT KÝ CONSOLE ===','=== TÓM TẮT CONSOLE ===','=== NHẬT KÝ ===','=== TÓM TẮT ==='];
+                    for (const cm of consoleMarkersList) {
+                        const cmIdx = rawTextUpper.indexOf(cm);
+                        if (cmIdx !== -1 && activeStream.thinkingText) {
+                            const truncated = rawText.substring(0, cmIdx);
+                            // only keep the part after the thinking marker
+                            const thinkIdx = ['=== THINKING ===','=== QUÁ TRÌNH TƯ DUY ===','=== SUY NGHĨ ===','=== TƯ DUY ==='].reduce((best, tk) => {
+                                const fi = rawTextUpper.indexOf(tk); return (fi !== -1 && (best === -1 || fi < best)) ? fi + tk.length : best;
+                            }, -1);
+                            if (thinkIdx !== -1) {
+                                activeStream.thinkingText = rawText.substring(thinkIdx, cmIdx);
+                                if (activeStream.thinkingContentEl) activeStream.thinkingContentEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.thinkingText));
+                            }
+                            break;
+                        }
+                    }
                     activeStream.section = 'content';
                 }
 
@@ -1463,6 +1480,22 @@ ${bodyContent}
                                         rawTextUpper.includes('=== BÁO CÁO CỤ THỂ ===') || 
                                         rawTextUpper.includes('=== BÁO CÁO ===');
                 if (hasReportMarker && activeStream.section !== 'report' && activeStream.section !== 'diagram' && activeStream.section !== 'explanation') {
+                    // Truncate contentText at the report marker so console log doesn't show report content
+                    const reportMarkersList = ['=== DETAILED REPORT ===','=== BÁO CÁO CHI TIẾT ===','=== BÁO CÁO CỤ THỂ ===','=== BÁO CÁO ==='];
+                    for (const rm of reportMarkersList) {
+                        const rmIdx = rawTextUpper.indexOf(rm);
+                        if (rmIdx !== -1 && activeStream.contentText) {
+                            const consoleMarkersList2 = ['=== CONSOLE MESSAGE ===','=== THÔNG BÁO CONSOLE ===','=== NHẬT KÝ CONSOLE ===','=== TÓM TẮT CONSOLE ===','=== NHẬT KÝ ===','=== TÓM TẮT ==='];
+                            const cmStart = consoleMarkersList2.reduce((best, cm) => {
+                                const fi = rawTextUpper.indexOf(cm); return (fi !== -1 && (best === -1 || fi < best)) ? fi + cm.length : best;
+                            }, -1);
+                            if (cmStart !== -1) {
+                                activeStream.contentText = rawText.substring(cmStart, rmIdx);
+                                if (activeStream.logBodyEl) activeStream.logBodyEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.contentText));
+                            }
+                            break;
+                        }
+                    }
                     activeStream.section = 'report';
                     // Programmatically switch to the Report tab when report starts streaming!
                     const reportTabBtn = document.getElementById('tab-btn-report');
@@ -1882,6 +1915,16 @@ ${bodyContent}
         });
 
         reportView.innerHTML = html;
+
+        // Wrap all tables in a scroll container to prevent overflow outside the report frame
+        reportView.querySelectorAll('table').forEach(tbl => {
+            if (!tbl.parentElement.classList.contains('table-scroll-wrapper')) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'table-scroll-wrapper';
+                tbl.parentNode.insertBefore(wrapper, tbl);
+                wrapper.appendChild(tbl);
+            }
+        });
     }
 
     // ── Display Report & Diagram Data ──────────────────────────────────────────
