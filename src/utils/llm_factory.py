@@ -246,30 +246,72 @@ def parse_agent_json(content: str, fallback_key: str) -> dict:
     # Sort matches by start index
     matches.sort(key=lambda x: x[0])
     
+    result = None
+    
     if matches:
+        # Step 1: Pre-process console_message block to see if report is inside it
         for i in range(len(matches)):
             start_idx, end_idx, key = matches[i]
             next_start = matches[i+1][0] if i + 1 < len(matches) else len(content)
             block_text = content[end_idx:next_start].strip()
             
-            if sections[key]:
-                sections[key] += "\n\n" + block_text
+            if key == "console_message" and i == len(matches) - 1:
+                split_match = re.search(r"\n\s*(?:#+|\d+\.|\*\*)\s+", block_text)
+                if split_match:
+                    split_idx = split_match.start()
+                    real_console = block_text[:split_idx].strip()
+                    real_report = block_text[split_idx:].strip()
+                    sections["console_message"] = real_console
+                    sections["detailed_report"] = real_report
+                else:
+                    if sections[key]:
+                        sections[key] += "\n\n" + block_text
+                    else:
+                        sections[key] = block_text
             else:
-                sections[key] = block_text
-                
+                if sections[key]:
+                    sections[key] += "\n\n" + block_text
+                else:
+                    sections[key] = block_text
+                    
         detailed_report = sections["detailed_report"]
         console_message = sections["console_message"]
         thinking = sections["thinking"]
         mermaid_diagram = sections["mermaid_diagram"]
         diagram_explanation = sections["diagram_explanation"]
         
-        report_data = detailed_report if detailed_report else content
+        report_data = detailed_report
         
-        report_data = re.sub(r'={2,}', '', report_data).replace("***", "")
-        console_message = re.sub(r'={2,}', '', console_message).replace("***", "").replace("**", "")
-        thinking = re.sub(r'={2,}', '', thinking).replace("***", "").replace("**", "")
-        diagram_explanation = re.sub(r'={2,}', '', diagram_explanation).replace("***", "").replace("**", "")
-        
+        if not report_data:
+            # Reconstruct content by omitting thinking and console blocks
+            sorted_matches = sorted(matches, key=lambda x: x[0])
+            reconstructed_parts = []
+            last_idx = 0
+            for i in range(len(sorted_matches)):
+                start_idx, end_idx, key = sorted_matches[i]
+                next_start = sorted_matches[i+1][0] if i + 1 < len(sorted_matches) else len(content)
+                
+                if last_idx < start_idx:
+                    unmarked_text = content[last_idx:start_idx].strip()
+                    if unmarked_text:
+                        reconstructed_parts.append(unmarked_text)
+                
+                if key not in ["thinking", "console_message"]:
+                    block_text = content[start_idx:next_start].strip()
+                    if block_text:
+                        reconstructed_parts.append(block_text)
+                last_idx = next_start
+                
+            if last_idx < len(content):
+                rem = content[last_idx:].strip()
+                if rem:
+                    reconstructed_parts.append(rem)
+            
+            if reconstructed_parts:
+                report_data = "\n\n".join(reconstructed_parts)
+            else:
+                report_data = content
+
         if mermaid_diagram.startswith("```mermaid"):
             mermaid_diagram = mermaid_diagram[10:]
         elif mermaid_diagram.startswith("```"):
@@ -277,66 +319,80 @@ def parse_agent_json(content: str, fallback_key: str) -> dict:
         if mermaid_diagram.endswith("```"):
             mermaid_diagram = mermaid_diagram[:-3]
         mermaid_diagram = mermaid_diagram.strip()
-        
-        return {
+
+        result = {
             fallback_key: report_data,
             "console_message": console_message if console_message else f"Tôi đã hoàn thành việc xử lý thông tin cho phần {fallback_key}.",
             "thinking": thinking,
             "mermaid_diagram": mermaid_diagram,
             "diagram_explanation": diagram_explanation
         }
-            
-    # 2. JSON-based parsing (fallback)
-    json_content = content
-    if json_content.startswith("```json"):
-        json_content = json_content[7:]
-    elif json_content.startswith("```"):
-        json_content = json_content[3:]
-    if json_content.endswith("```"):
-        json_content = json_content[:-3]
-    json_content = json_content.strip()
     
-    try:
-        start_idx = json_content.find('{')
-        end_idx = json_content.rfind('}')
-        if start_idx != -1 and end_idx != -1:
-            json_str = json_content[start_idx:end_idx+1]
-        else:
-            json_str = json_content
-            
-        data = json.loads(json_str)
-        if fallback_key in data and "console_message" in data:
-            return {
-                fallback_key: re.sub(r'={2,}', '', data[fallback_key]).replace("***", ""),
-                "console_message": re.sub(r'={2,}', '', data["console_message"]).replace("***", "").replace("**", ""),
-                "thinking": re.sub(r'={2,}', '', data.get("thinking", "")).replace("***", "").replace("**", ""),
-                "mermaid_diagram": data.get("mermaid_diagram", ""),
-                "diagram_explanation": re.sub(r'={2,}', '', data.get("diagram_explanation", "")).replace("***", "").replace("**", "")
-            }
-    except Exception:
-        # Secondary JSON recovery by escaping newlines
+    if not result:
+        # JSON-based parsing (fallback)
+        json_content = content
+        if json_content.startswith("```json"):
+            json_content = json_content[7:]
+        elif json_content.startswith("```"):
+            json_content = json_content[3:]
+        if json_content.endswith("```"):
+            json_content = json_content[:-3]
+        json_content = json_content.strip()
+        
         try:
-            escaped = re.sub(r'(?<!\\)\n', r'\\n', json_content)
-            start_idx = escaped.find('{')
-            end_idx = escaped.rfind('}')
+            start_idx = json_content.find('{')
+            end_idx = json_content.rfind('}')
             if start_idx != -1 and end_idx != -1:
-                data = json.loads(escaped[start_idx:end_idx+1])
-                if fallback_key in data and "console_message" in data:
-                    return {
-                        fallback_key: re.sub(r'={2,}', '', data[fallback_key]).replace("***", ""),
-                        "console_message": re.sub(r'={2,}', '', data["console_message"]).replace("***", "").replace("**", ""),
-                        "thinking": re.sub(r'={2,}', '', data.get("thinking", "")).replace("***", "").replace("**", ""),
-                        "mermaid_diagram": data.get("mermaid_diagram", ""),
-                        "diagram_explanation": re.sub(r'={2,}', '', data.get("diagram_explanation", "")).replace("***", "").replace("**", "")
-                    }
+                json_str = json_content[start_idx:end_idx+1]
+            else:
+                json_str = json_content
+                
+            data = json.loads(json_str)
+            if fallback_key in data and "console_message" in data:
+                result = {
+                    fallback_key: data[fallback_key],
+                    "console_message": data["console_message"],
+                    "thinking": data.get("thinking", ""),
+                    "mermaid_diagram": data.get("mermaid_diagram", ""),
+                    "diagram_explanation": data.get("diagram_explanation", "")
+                }
         except Exception:
-            pass
+            try:
+                escaped = re.sub(r'(?<!\\)\n', r'\\n', json_content)
+                start_idx = escaped.find('{')
+                end_idx = escaped.rfind('}')
+                if start_idx != -1 and end_idx != -1:
+                    data = json.loads(escaped[start_idx:end_idx+1])
+                    if fallback_key in data and "console_message" in data:
+                        result = {
+                            fallback_key: data[fallback_key],
+                            "console_message": data["console_message"],
+                            "thinking": data.get("thinking", ""),
+                            "mermaid_diagram": data.get("mermaid_diagram", ""),
+                            "diagram_explanation": data.get("diagram_explanation", "")
+                        }
+            except Exception:
+                pass
+                
+    if not result:
+        # Raw Text fallback
+        result = {
+            fallback_key: content,
+            "console_message": f"Tôi đã hoàn thành việc xử lý thông tin cho phần {fallback_key}.",
+            "thinking": "",
+            "mermaid_diagram": "",
+            "diagram_explanation": ""
+        }
+        
+    # Step 2: Post-process all text values to strip header markers robustly
+    clean_pattern = r"(?im)^\s*={0,}\s*\*?\*?\s*(thinking|console\s*message|detailed\s*report|mermaid\s*diagram|diagram\s*explanation|quá\s*trình\s*tư\s*duy|suy\s*nghĩ|tư\s*duy|thông\s*báo\s*console|nhật\s*ký\s*console|tóm\s*tắt\s*console|nhật\s*ký|tóm\s*tắt|báo\s*cáo\s*chi\s*tiết|báo\s*cáo\s*cụ\s*thể|báo\s*cáo|sơ\s*đồ\s*mermaid|biểu\s*đồ\s*mermaid|giải\s*thích\s*chi\s*tiết\s*sơ\s*đồ|giải\s*thích\s*sơ\s*đồ|giải\s*thích)\s*\*?\*?\s*={0,}\s*$"
+    
+    for k in [fallback_key, "console_message", "thinking", "diagram_explanation"]:
+        val = result.get(k, "")
+        if isinstance(val, str) and val:
+            val = re.sub(clean_pattern, "", val)
+            val = re.sub(r'={2,}', '', val)
+            val = val.replace("***", "")
+            result[k] = val.strip()
             
-    # 3. Raw Text fallback
-    return {
-        fallback_key: re.sub(r'={2,}', '', content).replace("***", ""),
-        "console_message": f"Tôi đã hoàn thành việc xử lý thông tin cho phần {fallback_key}.".replace("**", ""),
-        "thinking": "",
-        "mermaid_diagram": "",
-        "diagram_explanation": ""
-    }
+    return result

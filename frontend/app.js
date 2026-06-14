@@ -318,12 +318,13 @@ ${bodyContent}
             overlay.appendChild(spinnerWrapper);
             document.body.appendChild(overlay);
 
-            // Create tempDiv off-screen directly on the body (no fixed layout bugs)
+            // Create tempDiv directly on the body but in the background (no fixed layout or offscreen coordinates bugs)
             const tempDiv = document.createElement('div');
             tempDiv.className = 'academic-pdf-export';
             tempDiv.style.position = 'absolute';
-            tempDiv.style.left = '-9999px';
+            tempDiv.style.left = '0';
             tempDiv.style.top = '0';
+            tempDiv.style.zIndex = '-9999';
             tempDiv.style.width = '720px'; // 720px width yields perfect A4 size proportions
             tempDiv.style.background = '#ffffff';
             tempDiv.style.color = '#000000';
@@ -1974,16 +1975,16 @@ ${bodyContent}
                 let jsonStr = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();
                 const parsed = JSON.parse(jsonStr);
                 if (parsed.reason) {
-                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cầu hợp lệ.\n* **Lý do**: ${parsed.reason}\n\n*Đang chuyển tiếp yêu cầu đến các Tác nhân Nghiên cứu...*`;
+                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cầu hợp lệ.\n* **Lý do**: ${parsed.reason}`;
                 } else if (parsed.relevant === true) {
-                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cầu hợp lệ.\n\n*Đang chuyển tiếp yêu cầu đến các Tác nhân Nghiên cứu...*`;
+                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cầu hợp lệ.`;
                 }
             } catch (e) {
                 const match = cleanText.match(/"reason"\s*:\s*"([^"]*)/);
                 if (match) {
-                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cảnh hợp lệ.\n* **Lý do**: ${match[1]}\n\n*Đang chuyển tiếp yêu cầu đến các Tác nhân Nghiên cứu...*`;
+                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cảnh hợp lệ.\n* **Lý do**: ${match[1]}`;
                 } else {
-                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cầu hợp lệ.\n\n*Đang chuyển tiếp yêu cầu đến các Tác nhân Nghiên cứu...*`;
+                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cầu hợp lệ.`;
                 }
             }
         } else {
