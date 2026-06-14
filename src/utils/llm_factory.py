@@ -1,3 +1,4 @@
+import os
 from langchain_openai import ChatOpenAI
 from config import OLLAMA_API_KEY, OLLAMA_BASE_URL
 
