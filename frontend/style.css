@@ -903,21 +903,22 @@ body {
 .markdown-report table {
     display: table;
     width: 100%;
-    table-layout: fixed;
+    table-layout: auto;
     border-collapse: collapse;
     margin: 20px 0;
     font-size: 12.5px;
     border-top: 2px solid #000000;
     border-bottom: 2px solid #000000;
-    word-wrap: break-word;
+    word-wrap: normal;
 }
 .markdown-report th, .markdown-report td { 
     border: none; 
     padding: 8px 12px; 
     text-align: left; 
     white-space: normal; 
-    word-wrap: break-word;
-    word-break: break-word;
+    word-wrap: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
 }
 .markdown-report th         { border-bottom: 1px solid #000000; font-weight: 700; color: #000000; background: transparent; }
 .markdown-report td         { border-bottom: 0.5px solid #e5e7eb; color: #000000; }
@@ -1422,7 +1423,9 @@ body {
     padding: 8px 10px !important;
     font-size: 11pt !important;
     vertical-align: top !important;
-    word-break: break-word !important;
+    word-break: normal !important;
+    word-wrap: normal !important;
+    overflow-wrap: break-word !important;
     white-space: normal !important;
     color: #000000 !important;
 }

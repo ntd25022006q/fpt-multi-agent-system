@@ -258,193 +258,8 @@ ${bodyContent}
             }
 
             const origHTML = downloadPdfBtn.innerHTML;
-            downloadPdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo PDF…';
+            downloadPdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xuất báo cáo…';
             downloadPdfBtn.disabled = true;
-
-            // Save original scroll coordinates
-            const origScrollX = window.scrollX || window.pageXOffset || 0;
-            const origScrollY = window.scrollY || window.pageYOffset || 0;
-
-            // Save original body and HTML constraint styles to prevent clipping
-            const origBodyHeight = document.body.style.height;
-            const origBodyOverflow = document.body.style.overflow;
-            const origHtmlHeight = document.documentElement.style.height;
-            const origHtmlOverflow = document.documentElement.style.overflow;
-
-            document.body.style.height = 'auto';
-            document.body.style.overflow = 'visible';
-            document.documentElement.style.height = 'auto';
-            document.documentElement.style.overflow = 'visible';
-
-            const restoreBodyConstraints = () => {
-                document.body.style.height = origBodyHeight;
-                document.body.style.overflow = origBodyOverflow;
-                document.documentElement.style.height = origHtmlHeight;
-                document.documentElement.style.overflow = origHtmlOverflow;
-                window.scrollTo(origScrollX, origScrollY);
-            };
-
-            // Scroll to the top to prevent scroll offset rendering bugs (blank pages) in html2canvas
-            window.scrollTo(0, 0);
-
-            // Create a gorgeous premium dark overlay to indicate progress instead of a white screen of death
-            const overlay = document.createElement('div');
-            overlay.id = 'pdf-render-overlay';
-            overlay.style.position = 'fixed';
-            overlay.style.left = '0';
-            overlay.style.top = '0';
-            overlay.style.width = '100vw';
-            overlay.style.height = '100vh';
-            overlay.style.backgroundColor = 'rgba(15, 23, 42, 0.75)';
-            overlay.style.backdropFilter = 'blur(6px)';
-            overlay.style.webkitBackdropFilter = 'blur(6px)';
-            overlay.style.zIndex = '999999';
-            overlay.style.display = 'flex';
-            overlay.style.flexDirection = 'column';
-            overlay.style.alignItems = 'center';
-            overlay.style.justifyContent = 'center';
-            overlay.style.fontFamily = "'Inter', sans-serif";
-            overlay.style.color = '#ffffff';
-
-            const spinnerWrapper = document.createElement('div');
-            spinnerWrapper.style.textAlign = 'center';
-            spinnerWrapper.innerHTML = `
-                <div style="margin-bottom: 20px; font-size: 32px; color: #fb923c;">
-                    <i class="fa-solid fa-file-pdf fa-bounce"></i>
-                </div>
-                <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Đang kết xuất PDF (Định dạng Word)</div>
-                <div style="font-size: 13px; color: #94a3b8; max-width: 300px; line-height: 1.5;">Vui lòng đợi trong giây lát. Hệ thống đang chuyển đổi nội dung báo cáo sang tài liệu định dạng Word...</div>
-            `;
-            overlay.appendChild(spinnerWrapper);
-            document.body.appendChild(overlay);
-
-            // Create tempDiv directly on the body but in the background
-            const tempDiv = document.createElement('div');
-            tempDiv.className = 'word-style-report';
-            tempDiv.style.position = 'absolute';
-            tempDiv.style.left = '0';
-            tempDiv.style.top = '0';
-            tempDiv.style.zIndex = '-9999';
-            tempDiv.style.width = '720px'; // 720px width yields perfect A4 size proportions
-            tempDiv.style.background = '#ffffff';
-            tempDiv.style.color = '#000000';
-            document.body.appendChild(tempDiv);
-
-            let resolved = false;
-
-            // Safety timeout to clean up if html2pdf freezes
-            const timeoutId = setTimeout(() => {
-                if (!resolved) {
-                    resolved = true;
-                    if (tempDiv.parentNode) {
-                        document.body.removeChild(tempDiv);
-                    }
-                    if (overlay.parentNode) {
-                        document.body.removeChild(overlay);
-                    }
-                    restoreBodyConstraints();
-                    downloadPdfBtn.innerHTML = origHTML;
-                    downloadPdfBtn.disabled = false;
-                    alert('Thời gian kết xuất PDF quá lâu. Đã tự động khôi phục giao diện. Vui lòng thử lại!');
-                }
-            }, 20000); // 20-second timeout
-
-            try {
-                // Get the report content (exactly what is inside report-view)
-                let reportContentHTML = reportView.innerHTML;
-
-                tempDiv.innerHTML = reportContentHTML;
-
-                // Re-run LaTeX auto-render in the temp div to ensure math renders inside PDF
-                if (window.renderMathInElement) {
-                    window.renderMathInElement(tempDiv, {
-                        delimiters: [
-                            { left: '$$', right: '$$', display: true },
-                            { left: '$', right: '$', display: false }
-                        ],
-                        throwOnError: false
-                    });
-                }
-
-                const opt = {
-                    margin:       [20, 20, 20, 20], // Standard Word layout margins
-                    filename:     `BaoCao_ChiTiet_${new Date().toISOString().slice(0,10)}.pdf`,
-                    image:        { type: 'jpeg', quality: 0.98 },
-                    html2canvas:  { 
-                        scale: 2, 
-                        useCORS: true, 
-                        logging: true,
-                        letterRendering: true,
-                        windowScrollX: 0,
-                        windowScrollY: 0,
-                        scrollX: 0,
-                        scrollY: 0
-                    },
-                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                };
-
-                // Force layout calculation
-                const forceReflow = tempDiv.offsetHeight;
-
-                // Delay running html2pdf to ensure browser paints and layout is ready
-                setTimeout(() => {
-                    html2pdf().set(opt).from(tempDiv).save().then(() => {
-                        resolved = true;
-                        clearTimeout(timeoutId);
-                        if (tempDiv.parentNode) {
-                            document.body.removeChild(tempDiv);
-                        }
-                        if (overlay.parentNode) {
-                            document.body.removeChild(overlay);
-                        }
-                        restoreBodyConstraints();
-                        downloadPdfBtn.innerHTML = origHTML;
-                        downloadPdfBtn.disabled = false;
-                    }).catch(pdfErr => {
-                        resolved = true;
-                        clearTimeout(timeoutId);
-                        console.error('html2pdf save error:', pdfErr);
-                        alert(`Lỗi tạo PDF: ${pdfErr.message}`);
-                        if (tempDiv.parentNode) {
-                            document.body.removeChild(tempDiv);
-                        }
-                        if (overlay.parentNode) {
-                            document.body.removeChild(overlay);
-                        }
-                        restoreBodyConstraints();
-                        downloadPdfBtn.innerHTML = origHTML;
-                        downloadPdfBtn.disabled = false;
-                    });
-                }, 150);
-
-            } catch (err) {
-                resolved = true;
-                clearTimeout(timeoutId);
-                console.error('PDF error:', err);
-                alert(`Lỗi tạo PDF: ${err.message}`);
-                if (tempDiv.parentNode) {
-                    document.body.removeChild(tempDiv);
-                }
-                if (overlay.parentNode) {
-                    document.body.removeChild(overlay);
-                }
-                restoreBodyConstraints();
-                downloadPdfBtn.innerHTML = origHTML;
-                downloadPdfBtn.disabled = false;
-            }
-        });
-    }
-
-    if (downloadDocxBtn) {
-        downloadDocxBtn.addEventListener('click', () => {
-            if (!currentMarkdown || currentMarkdown.includes('not generated yet') || currentMarkdown.includes('Báo cáo chưa được tạo')) {
-                alert('Chưa có báo cáo. Vui lòng chạy quy trình trước!');
-                return;
-            }
-
-            const origHTML = downloadDocxBtn.innerHTML;
-            downloadDocxBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo Word…';
-            downloadDocxBtn.disabled = true;
 
             try {
                 // Get the report content
@@ -463,7 +278,9 @@ ${bodyContent}
                                 font-size: 12pt;
                                 line-height: 1.5;
                                 color: #000000;
-                                margin: 1in;
+                                margin: 0; /* Let Word's default page margins apply, no double margin narrowing */
+                                padding: 0;
+                                width: 100%;
                             }
                             h1, h2, h3, h4, h5, h6 {
                                 font-family: 'Times New Roman', Times, serif;
@@ -500,13 +317,16 @@ ${bodyContent}
                                 border-collapse: collapse;
                                 margin-top: 12pt;
                                 margin-bottom: 12pt;
+                                table-layout: auto;
                             }
                             th, td {
                                 border: 1px solid #000000;
-                                padding: 6px 8px;
+                                padding: 8px 10px;
                                 font-size: 11pt;
                                 vertical-align: top;
-                                word-break: break-word;
+                                word-break: normal;
+                                word-wrap: normal;
+                                overflow-wrap: break-word;
                             }
                             th {
                                 background-color: #f2f2f2;
@@ -554,13 +374,13 @@ ${bodyContent}
                     URL.revokeObjectURL(url);
                 }, 100);
 
-                downloadDocxBtn.innerHTML = origHTML;
-                downloadDocxBtn.disabled = false;
+                downloadPdfBtn.innerHTML = origHTML;
+                downloadPdfBtn.disabled = false;
             } catch (err) {
                 console.error('Docx export error:', err);
                 alert(`Lỗi tạo Word: ${err.message}`);
-                downloadDocxBtn.innerHTML = origHTML;
-                downloadDocxBtn.disabled = false;
+                downloadPdfBtn.innerHTML = origHTML;
+                downloadPdfBtn.disabled = false;
             }
         });
     }
@@ -1689,10 +1509,8 @@ ${bodyContent}
                             return;
                         }
                     }
-                    if (!tokenUpper.includes('===') && !tokenUpper.includes('CONSOLE') && !tokenUpper.includes('THÔNG BÁO') && !tokenUpper.includes('NHẬT KÝ') && !tokenUpper.includes('TÓM TẮT')) {
-                        activeStream.thinkingText += data.token;
-                        activeStream.thinkingContentEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.thinkingText));
-                    }
+                    activeStream.thinkingText += data.token;
+                    activeStream.thinkingContentEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.thinkingText));
                 } else if (activeStream.section === 'content') {
                     if (activeStream.logBodyEl.textContent === '') {
                         let idx = -1;
@@ -1720,10 +1538,8 @@ ${bodyContent}
                             return;
                         }
                     }
-                    if (!tokenUpper.includes('===') && !tokenUpper.includes('DETAILED') && !tokenUpper.includes('BÁO CÁO')) {
-                        activeStream.contentText += data.token;
-                        activeStream.logBodyEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.contentText));
-                    }
+                    activeStream.contentText += data.token;
+                    activeStream.logBodyEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.contentText));
                 } else if (activeStream.section === 'report') {
                     if (!activeStream.reportText) {
                         let idx = -1;
@@ -1748,9 +1564,7 @@ ${bodyContent}
                             activeStream.reportText = '';
                         }
                     } else {
-                        if (!tokenUpper.includes('===') && !tokenUpper.includes('MERMAID') && !tokenUpper.includes('SƠ ĐỒ') && !tokenUpper.includes('BIỂU ĐỒ')) {
-                            activeStream.reportText += data.token;
-                        }
+                        activeStream.reportText += data.token;
                     }
                     if (activeStream.reportText) {
                         const cleanedReportText = cleanInternalFilenames(activeStream.reportText.replace(/={2,}/g, '').replace(/\*\*\*/g, ''));
@@ -1771,9 +1585,7 @@ ${bodyContent}
                             activeStream.diagramText = '';
                         }
                     } else {
-                        if (!tokenUpper.includes('===') && !tokenUpper.includes('DIAGRAM') && !tokenUpper.includes('GIẢI THÍCH')) {
-                            activeStream.diagramText += data.token;
-                        }
+                        activeStream.diagramText += data.token;
                     }
                     if (activeStream.diagramText) {
                         const cleanedDiagramText = activeStream.diagramText.replace(/={2,}/g, '').trim();
@@ -1801,9 +1613,7 @@ ${bodyContent}
                             activeStream.explanationText = '';
                         }
                     } else {
-                        if (!tokenUpper.includes('===')) {
-                            activeStream.explanationText += data.token;
-                        }
+                        activeStream.explanationText += data.token;
                     }
                     if (activeStream.explanationText) {
                         throttledRenderExplanation(activeStream.explanationText);
