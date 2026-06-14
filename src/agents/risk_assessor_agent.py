@@ -69,7 +69,7 @@ async def risk_assessor_node(state: ResearchState, config: RunnableConfig = None
     )
 
     # Always stream — real-time token delivery
-    llm = create_llm(MODEL_RISK_ASSESSOR_AGENT, temperature=0.2, max_tokens=2000, streaming=True)
+    llm = create_llm(MODEL_RISK_ASSESSOR_AGENT, temperature=0.2, max_tokens=2000, streaming=True, config=config)
     
     call_config = {}
     if stream_queue:

@@ -209,7 +209,7 @@ def download_markdown():
 
 
 @app.get("/api/run")
-async def run_agents(topic: str):
+async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: str = ""):
     """LangGraph multi-agent pipeline via Server-Sent Events."""
 
     async def event_generator():
@@ -247,7 +247,9 @@ async def run_agents(topic: str):
                     initial_state,
                     config={
                         "configurable": {
-                            "stream_queue": stream_queue
+                            "stream_queue": stream_queue,
+                            "ollama_api_key": ollama_api_key,
+                            "openrouter_api_key": openrouter_api_key
                         }
                     }
                 )

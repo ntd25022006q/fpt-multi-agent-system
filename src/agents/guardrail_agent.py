@@ -64,7 +64,7 @@ async def guardrail_node(state: ResearchState, config: RunnableConfig = None) ->
         
     # Always stream — keeps TCP alive and delivers tokens in real-time
     from config import MODEL_GUARDRAIL_AGENT
-    llm = create_llm(MODEL_GUARDRAIL_AGENT, temperature=0.0, max_tokens=600, streaming=True)
+    llm = create_llm(MODEL_GUARDRAIL_AGENT, temperature=0.0, max_tokens=600, streaming=True, config=config)
     
     call_config = {}
     if stream_queue:

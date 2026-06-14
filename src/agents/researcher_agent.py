@@ -153,7 +153,7 @@ async def researcher_node(state: ResearchState, config: RunnableConfig = None) -
     human_content = f"Research Topic: {state['topic']}\n\nFPT Corporate Knowledge Base Context:\n{context}\n\n{lang_instruction}"
 
     # Always stream — prevents timeout and delivers tokens in real-time
-    llm = create_llm(MODEL_RESEARCHER_AGENT, temperature=0.3, max_tokens=2000, streaming=True)
+    llm = create_llm(MODEL_RESEARCHER_AGENT, temperature=0.3, max_tokens=2000, streaming=True, config=config)
     
     call_config = {}
     if stream_queue:

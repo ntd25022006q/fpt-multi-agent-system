@@ -40,6 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const serverSettingsBtn = document.getElementById('server-settings-btn');
     const serverSettingsGroup = document.getElementById('server-settings-group');
     const serverUrlInput = document.getElementById('server-url-input');
+    const ollamaKeyInput = document.getElementById('ollama-key-input');
+    const openrouterKeyInput = document.getElementById('openrouter-key-input');
 
     if (serverUrlInput) {
         let defaultUrl = 'https://fpt-multi-agent-system.onrender.com';
@@ -60,6 +62,20 @@ document.addEventListener('DOMContentLoaded', () => {
         serverUrlInput.addEventListener('input', () => {
             localStorage.setItem('fpt_server_url', serverUrlInput.value.trim());
             checkServerConnection();
+        });
+    }
+
+    if (ollamaKeyInput) {
+        ollamaKeyInput.value = localStorage.getItem('fpt_ollama_api_key') || '';
+        ollamaKeyInput.addEventListener('input', () => {
+            localStorage.setItem('fpt_ollama_api_key', ollamaKeyInput.value.trim());
+        });
+    }
+
+    if (openrouterKeyInput) {
+        openrouterKeyInput.value = localStorage.getItem('fpt_openrouter_api_key') || '';
+        openrouterKeyInput.addEventListener('input', () => {
+            localStorage.setItem('fpt_openrouter_api_key', openrouterKeyInput.value.trim());
         });
     }
 
@@ -1206,7 +1222,17 @@ ${bodyContent}
             const logDiv = document.createElement('div');
             logDiv.className   = 'console-log';
             logDiv.style.color = '#ef4444';
-            logDiv.innerHTML = `<span style="font-weight:bold;">[Lỗi Hệ Thống]</span> Tiến trình gặp sự cố: <strong>${cleanErr}</strong>. Vui lòng kiểm tra lại cấu hình hoặc API Key.`;
+            
+            if (cleanErr.includes('429') && (cleanErr.includes('limit') || cleanErr.includes('ollama'))) {
+                logDiv.innerHTML = `<span style="font-weight:bold;">[Lỗi Hệ Thống]</span> Bạn đã đạt giới hạn sử dụng hàng tuần của Ollama Cloud (Lỗi 429).<br><br>
+                <strong>Cách khắc phục lỗi 429 cực đơn giản và hoàn toàn miễn phí:</strong><br>
+                1. Đăng ký tài khoản và lấy một API Key miễn phí tại <a href="https://openrouter.ai" target="_blank" style="color: #60a5fa; text-decoration: underline; font-weight: bold;">OpenRouter.ai</a> (chỉ mất 30 giây, không cần thẻ tín dụng).<br>
+                2. Nhấn biểu tượng <strong>Cài đặt (hình bánh răng ⚙️)</strong> ở góc trên bên trái màn hình.<br>
+                3. Nhập API Key vừa lấy vào mục <strong>Khóa API OpenRouter</strong> để tiếp tục sử dụng hệ thống.<br><br>
+                <em>Hoặc nhập Khóa API Ollama Cloud mới của bạn vào ô tương ứng.</em>`;
+            } else {
+                logDiv.innerHTML = `<span style="font-weight:bold;">[Lỗi Hệ Thống]</span> Tiến trình gặp sự cố: <strong>${cleanErr}</strong>. Vui lòng kiểm tra lại cấu hình hoặc API Key.`;
+            }
             consoleOutput.appendChild(logDiv);
             consoleOutput.scrollTop = consoleOutput.scrollHeight;
             localStorage.removeItem('fpt_active_search');
@@ -1639,7 +1665,13 @@ ${bodyContent}
             eventSource = null;
         }
 
-        eventSource = new EventSource(getApiPrefix() + `/api/run?topic=${encodeURIComponent(topic)}`);
+        const ollamaKey = ollamaKeyInput ? ollamaKeyInput.value.trim() : '';
+        const openrouterKey = openrouterKeyInput ? openrouterKeyInput.value.trim() : '';
+        let url = getApiPrefix() + `/api/run?topic=${encodeURIComponent(topic)}`;
+        if (ollamaKey) url += `&ollama_api_key=${encodeURIComponent(ollamaKey)}`;
+        if (openrouterKey) url += `&openrouter_api_key=${encodeURIComponent(openrouterKey)}`;
+
+        eventSource = new EventSource(url);
 
         eventSource.onmessage = (event) => {
             sseErrorCount = 0;
@@ -2282,7 +2314,13 @@ ${bodyContent}
                     eventSource = null;
                 }
 
-                eventSource = new EventSource(getApiPrefix() + `/api/run?topic=${encodeURIComponent(activeSearch.topic)}`);
+                const ollamaKey = localStorage.getItem('fpt_ollama_api_key') || '';
+                const openrouterKey = localStorage.getItem('fpt_openrouter_api_key') || '';
+                let url = getApiPrefix() + `/api/run?topic=${encodeURIComponent(activeSearch.topic)}`;
+                if (ollamaKey) url += `&ollama_api_key=${encodeURIComponent(ollamaKey)}`;
+                if (openrouterKey) url += `&openrouter_api_key=${encodeURIComponent(openrouterKey)}`;
+
+                eventSource = new EventSource(url);
 
                 eventSource.onmessage = (event) => {
                     sseErrorCount = 0;

@@ -259,7 +259,7 @@ async def reporter_node(state: ResearchState, config: RunnableConfig = None) -> 
 
     # Always use streaming=True to prevent HTTP read timeout on long generation.
     # Streaming keeps the TCP connection alive by sending tokens incrementally.
-    llm = create_llm(MODEL_REPORTER_AGENT, temperature=0.2, max_tokens=2500, streaming=True)
+    llm = create_llm(MODEL_REPORTER_AGENT, temperature=0.2, max_tokens=2500, streaming=True, config=config)
     
     query_type = state.get("query_type", "consulting")
     lang = state.get("language", "vi")

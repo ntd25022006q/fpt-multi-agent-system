@@ -59,7 +59,7 @@ async def analyst_node(state: ResearchState, config: RunnableConfig = None) -> d
     human_content = f"Research Topic: {state['topic']}\n\nResearch Data:\n{state['research_data']}\n\n{lang_instruction}"
 
     # Always stream — real-time token delivery
-    llm = create_llm(MODEL_ANALYST_AGENT, temperature=0.2, max_tokens=2000, streaming=True)
+    llm = create_llm(MODEL_ANALYST_AGENT, temperature=0.2, max_tokens=2000, streaming=True, config=config)
     
     call_config = {}
     if stream_queue:

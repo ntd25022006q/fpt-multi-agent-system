@@ -97,7 +97,7 @@ def start_latency_checker():
     t = threading.Thread(target=worker, daemon=True)
     t.start()
 
-def create_llm(model: str, temperature: float = 0.2, max_tokens: int = 2000, streaming: bool = False):
+def create_llm(model: str, temperature: float = 0.2, max_tokens: int = 2000, streaming: bool = False, config = None):
     """Create a ChatOpenAI wrapper instance pointing to the Ollama Cloud API,
     equipped with fallbacks from the best free Ollama Cloud models sorted by latency.
     """
@@ -106,6 +106,21 @@ def create_llm(model: str, temperature: float = 0.2, max_tokens: int = 2000, str
         start_latency_checker()
     except Exception:
         pass
+
+    # Extract custom keys from config if provided
+    custom_ollama_key = ""
+    custom_openrouter_key = ""
+    if config:
+        if isinstance(config, dict):
+            configurable = config.get("configurable", {})
+        else:
+            configurable = getattr(config, "configurable", {})
+        if isinstance(configurable, dict):
+            custom_ollama_key = configurable.get("ollama_api_key", "")
+            custom_openrouter_key = configurable.get("openrouter_api_key", "")
+
+    active_ollama_key = custom_ollama_key or OLLAMA_API_KEY
+    active_openrouter_key = custom_openrouter_key or os.environ.get("OPENROUTER_API_KEY", "")
 
     latencies = _model_latencies
     if not latencies:
@@ -132,7 +147,7 @@ def create_llm(model: str, temperature: float = 0.2, max_tokens: int = 2000, str
 
     primary_llm = ChatOpenAI(
         model=primary_model,
-        api_key=OLLAMA_API_KEY,
+        api_key=active_ollama_key,
         base_url=OLLAMA_BASE_URL,
         temperature=temperature,
         timeout=15,          # 15s timeout
@@ -149,7 +164,7 @@ def create_llm(model: str, temperature: float = 0.2, max_tokens: int = 2000, str
         fallbacks.append(
             ChatOpenAI(
                 model=fallback_model,
-                api_key=OLLAMA_API_KEY,
+                api_key=active_ollama_key,
                 base_url=OLLAMA_BASE_URL,
                 temperature=temperature,
                 timeout=10,          # 10s timeout
@@ -160,15 +175,13 @@ def create_llm(model: str, temperature: float = 0.2, max_tokens: int = 2000, str
         )
         
     # OpenRouter fallback integration to thoroughly resolve Ollama weekly limits (429)
-    import os
-    openrouter_api_key = os.environ.get("OPENROUTER_API_KEY", "")
-    if openrouter_api_key:
+    if active_openrouter_key:
         openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
         for or_model in ["google/gemini-2.5-flash:free", "meta-llama/llama-3.3-70b-instruct:free", "deepseek/deepseek-chat:free"]:
             fallbacks.append(
                 ChatOpenAI(
                     model=or_model,
-                    api_key=openrouter_api_key,
+                    api_key=active_openrouter_key,
                     base_url=openrouter_base_url,
                     temperature=temperature,
                     timeout=15,
