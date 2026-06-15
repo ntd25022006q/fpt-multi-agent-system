@@ -159,6 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let hasAnalystRun = false;
     let currentDiagramCode = '';
     let hideAnalysisLogText = localStorage.getItem('fpt_hide_analysis_log_text') === 'true';
+    let irrelevantDetected = false; // Guard flag: once irrelevant is detected, prevent throttle from overwriting
 
     // Active real-time stream state
     let activeStream = {
@@ -650,7 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
             _metricsIrrelevantCard.className = 'metrics-irrelevant-card';
             _metricsIrrelevantCard.innerHTML = `
                 <div style="text-align: center; padding: 24px 16px;">
-                    <h1 style="font-size: 14px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 8px 0;">Chỉ Số Không Áp Dụng</h1>
+                    <h1 style="font-size: 14px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 8px 0;">CHỈ SỐ KHÔNG ÁP DỤNG</h1>
                     <p style="font-size: 11.5px; color: #475569; line-height: 1.7; max-width: 260px; margin: 0 auto;">
                         Yêu cầu bị từ chối nên không tạo chỉ số quy trình.
                     </p>
@@ -668,6 +669,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const showIrrelevantReportCard = () => {
+        // Cancel any pending throttle render to prevent race condition
+        if (renderTimeout) {
+            clearTimeout(renderTimeout);
+            renderTimeout = null;
+        }
+        pendingReportContent = null;
+        irrelevantDetected = true; // Lock: prevent future throttle renders from overwriting
+
         reportView.className = 'markdown-report';
         reportView.style.border = '1px solid #fecaca';
         reportView.style.borderRadius = '8px';
@@ -682,7 +691,7 @@ document.addEventListener('DOMContentLoaded', () => {
         reportView.style.position = 'relative';
         reportView.innerHTML = `
             <div style="text-align: center; padding: 20px 0;">
-                <h1 style="font-size: 16px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 10px 0;">Báo Cáo Không Áp Dụng</h1>
+                <h1 style="font-size: 16px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 10px 0;">BÁO CÁO KHÔNG ÁP DỤNG</h1>
                 <p style="font-size: 13px; color: #475569; line-height: 1.6; max-width: 400px; margin: 0 auto;">
                     Yêu cầu bị từ chối nên không tạo báo cáo chi tiết.
                 </p>
@@ -746,7 +755,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         mermaidOutput.innerHTML = `
             <div style="text-align: center; padding: 20px 0;">
-                <h1 style="font-size: 16px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 10px 0;">Sơ Đồ Không Áp Dụng</h1>
+                <h1 style="font-size: 16px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 10px 0;">SƠ ĐỒ KHÔNG ÁP DỤNG</h1>
                 <p style="font-size: 13px; color: #475569; line-height: 1.6; max-width: 400px; margin: 0 auto;">
                     Yêu cầu bị từ chối nên không tạo sơ đồ quy trình.
                 </p>
@@ -885,6 +894,9 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(expRenderTimeout);
             expRenderTimeout = null;
         }
+        pendingReportContent = null;
+        pendingExpContent = null;
+        irrelevantDetected = false; // Reset guard flag for new runs
 
         hasAnalystRun = false;
         document.querySelectorAll('.graph-node').forEach(n => {
@@ -1580,6 +1592,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (data.stats.irrelevant) {
                     showIrrelevantMetricsCard();
+                    statStatus.textContent = 'Bị Từ Chối';
+                    statStatus.style.color = '#dc2626';
                 } else {
                     const agentCount = data.stats.agents || 6;
                     statAgents.textContent = `${agentCount} / ${agentCount === 3 ? 3 : 6}`;
@@ -2097,6 +2111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function throttledRenderMarkdownReport(content) {
         pendingReportContent = content;
         if (renderTimeout) return;
+        if (irrelevantDetected) return; // Don't schedule renders after irrelevant card is shown
         
         renderTimeout = setTimeout(() => {
             renderTimeout = null;
@@ -2136,24 +2151,28 @@ document.addEventListener('DOMContentLoaded', () => {
         let normalizedContent = normalizeVietnameseText(content);
         let processed = normalizedContent;
         
-        // Parse Guardrail JSON into clean human-readable text
+        // Parse Guardrail JSON — if irrelevant, show rejection card immediately (matching diagram behavior)
         let cleanText = normalizedContent.trim();
         if (cleanText.startsWith('{') || cleanText.includes('"relevant"')) {
             try {
                 let jsonStr = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();
                 const parsed = JSON.parse(jsonStr);
-                if (parsed.reason) {
-                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cầu hợp lệ.\n* **Lý do**: ${parsed.reason}`;
-                } else if (parsed.relevant === true) {
-                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cầu hợp lệ.`;
+                if (parsed.relevant === false || parsed.relevant === 'false') {
+                    // Irrelevant query → show rejection card (same style as diagram)
+                    showIrrelevantReportCard();
+                    return;
                 }
+                // Relevant query → just skip this JSON block, reporter will produce the real report
+                return;
             } catch (e) {
-                const match = cleanText.match(/"reason"\s*:\s*"([^"]*)/);
-                if (match) {
-                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cầu hợp lệ.\n* **Lý do**: ${match[1]}`;
-                } else {
-                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cầu hợp lệ.`;
+                // Try to detect irrelevant via regex fallback
+                const isIrrelevantMatch = cleanText.match(/"relevant"\s*:\s*(false|"false")/i);
+                if (isIrrelevantMatch) {
+                    showIrrelevantReportCard();
+                    return;
                 }
+                // If we can't parse but it contains "relevant", likely guardrail output — skip
+                return;
             }
         } else {
             processed = cleanReportContent(processed);
@@ -2340,10 +2359,10 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Mermaid render failure:', mErr);
         }
 
-        // Render diagram explanation
+        // Render diagram explanation (skip for irrelevant queries — already hidden by showIrrelevantDiagramCard)
         const expContainer = document.getElementById('mermaid-explanation-container');
         const expContent = document.getElementById('mermaid-explanation-content');
-        if (expContainer && expContent && explanationText) {
+        if (expContainer && expContent && explanationText && !isIrrelevant) {
             expContent.innerHTML = marked.parse(explanationText);
             expContainer.style.display = 'block';
         } else if (expContainer) {
@@ -2485,6 +2504,17 @@ document.addEventListener('DOMContentLoaded', () => {
             clearInterval(timerInterval);
             timerInterval = null;
         }
+        if (renderTimeout) {
+            clearTimeout(renderTimeout);
+            renderTimeout = null;
+        }
+        if (expRenderTimeout) {
+            clearTimeout(expRenderTimeout);
+            expRenderTimeout = null;
+        }
+        pendingReportContent = null;
+        pendingExpContent = null;
+        irrelevantDetected = false; // Reset guard flag for new runs
         topicInput.value = '';
         restoreMetricsGrid();
         statTime.textContent   = '0.000s';
@@ -2578,14 +2608,20 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch(getApiPrefix() + '/api/report?t=' + Date.now())
             .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
             .then(data => {
-                if (data.report && 
-                    !data.report.includes('Báo cáo chưa được tạo') && 
-                    !data.report.includes('Report not created') && 
-                    !data.report.includes('not generated yet') &&
-                    !data.report.includes('Request Rejected') &&
-                    !data.report.trim().startsWith('# Không áp dụng') &&
-                    !data.report.trim().startsWith('# IRRELEVANT')) {
-                    
+                if (!data.report) {
+                    showUncreatedReportCard();
+                    showUncreatedDiagramCard();
+                    return;
+                }
+
+                const isIrrelevantOnInit = data.report.trim().startsWith('# Không áp dụng') ||
+                                           data.report.trim().startsWith('# IRRELEVANT');
+                const isPlaceholder = data.report.includes('Báo cáo chưa được tạo') || 
+                                      data.report.includes('Report not created') || 
+                                      data.report.includes('not generated yet') ||
+                                      data.report.includes('Request Rejected');
+
+                if (isIrrelevantOnInit || !isPlaceholder) {
                     let topic = 'Phân tích hệ thống';
                     const match = data.report.match(/^#\s+(.+)$/m);
                     if (match && match[1]) {
