@@ -30,8 +30,6 @@ def clean_internal_filenames(text: str) -> str:
     if not text:
         return ""
     
-    import re
-    
     # 1. Remove phrases like "Truy xuất dữ liệu từ kho tri thức nội bộ (file1.md, file2.md...)" or with translated names
     # Match the prefix and any list of .md/.txt files or translated names in parentheses
     prefix_pat = r'(?:Truy\s+xuất\s+dữ\s+liệu|Truy\s+xuất\s+tri\s+thức|Nguồn\s+dữ\s+liệu|Tham\s+khảo)\s+từ\s+(?:kho\s+)?(?:tri\s+thức|dữ\s+liệu)\s+nội\s+bộ'
