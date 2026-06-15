@@ -1,5 +1,6 @@
 import time
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+import asyncio
+from langchain_core.messages import SystemMessage, HumanMessage
 from src.state import ResearchState
 from src.utils.llm_factory import create_llm, parse_agent_json, get_actual_model_used
 from src.utils.display import print_agent_start, print_agent_info, print_agent_complete
@@ -320,7 +321,6 @@ async def reporter_node(state: ResearchState, config: RunnableConfig = None) -> 
                     "toks_per_sec": 0
                 })
             if "timeout" in err_str.lower() or "timed out" in err_str.lower() or "connection" in err_str.lower():
-                import asyncio
                 wait = 5 * (attempt + 1)
                 print(f"[Reporter] Đang chờ {wait}s trước khi thử lại...")
                 await asyncio.sleep(wait)
@@ -330,7 +330,7 @@ async def reporter_node(state: ResearchState, config: RunnableConfig = None) -> 
     if response is None:
         # All attempts failed: return graceful error report rather than crashing
         err_report = (
-            f"# Lỗi Xử Lý Agentorter\n\n"
+            f"# Lỗi Xử Lý Reporter\n\n"
             f"Không thể tạo báo cáo do lỗi API: {str(last_exc).split(chr(10))[0]}\n\n"
             f"Vui lòng kiểm tra kết nối internet và API key, sau đó thử lại."
         )
@@ -385,7 +385,7 @@ async def reporter_node(state: ResearchState, config: RunnableConfig = None) -> 
     if hasattr(response, "usage_metadata") and response.usage_metadata:
         tokens = response.usage_metadata.get("total_tokens", 0)
     elif "token_usage" in response.response_metadata:
-        tokens = response.response_metadata["token_usage"].get("total_tokens", 0)
+        tokens = response.response_metadata.get("token_usage", {}).get("total_tokens", 0)
         
     if tokens == 0:
         tokens = (len(prompt) + len(human_content) + len(response.content)) // 4
@@ -419,8 +419,9 @@ async def reporter_node(state: ResearchState, config: RunnableConfig = None) -> 
         else:
             console_message = (
                 "Tôi đã hoàn thành việc biên soạn và tổng hợp báo cáo chiến lược AI-First cho FPT Software. "
-                "Báo cáo bao gồm 4 phân hệ cốt lõi: Cơ sở lý thuyết & kiến trúc nền tảng, Đánh giá ma trận đánh đổi (Monolithic vs Microservices), "
-                "Quản lý rủi ro an ninh mạng theo tiêu chuẩn FPT Secure-First, và Lộ trình triển khai chi tiết kèm các chỉ số KPI định lượng. "
+                f"Báo cáo được xây dựng dựa trên chủ đề: {state.get('topic', 'phân tích chiến lược')}. "
+                "Nội dung bao gồm các phân hệ cốt lõi: cơ sở lý thuyết & kiến trúc nền tảng, đánh giá ma trận đánh đổi, "
+                "quản lý rủi ro an ninh mạng theo tiêu chuẩn FPT Secure-First, và lộ trình triển khai chi tiết kèm các chỉ số KPI định lượng. "
                 "Đồng thời, tôi đã thiết lập thành công sơ đồ luồng quy trình hệ thống bằng Mermaid và phần giải thích chi tiết kiến trúc đi kèm."
             )
 
