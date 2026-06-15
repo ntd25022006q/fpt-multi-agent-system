@@ -23,6 +23,7 @@ Thumbs.db
 .idea/
 
 # Environment / Vercel Secrets
+.env
 .env.local
 .env.*
 !.env.example

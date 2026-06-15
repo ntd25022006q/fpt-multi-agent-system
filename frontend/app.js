@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     //  DOWNLOAD FUNCTIONS
     // ════════════════════════════════════════════════════════════════════════
 
-    // ── Xem báo cáo chi tiết (mở tab mới) ────────────────────────────────────
+    // ── Xuất báo cáo chi tiết (tải file HTML) ─────────────────────────────────
     if (downloadPdfBtn) {
         downloadPdfBtn.addEventListener('click', () => {
             if (!currentMarkdown || currentMarkdown.includes('not generated yet') || currentMarkdown.includes('Báo cáo chưa được tạo') || currentMarkdown.includes('IRRELEVANT') || currentMarkdown.includes('Không áp dụng')) {
@@ -210,12 +210,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const topic = topicInput?.value || 'Báo cáo chi tiết chiến lược';
             const safeTopic = topic.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-            // Lấy style.css của trang hiện tại để tab mới trông giống hệt
-            const cssSheets = Array.from(document.styleSheets)
-                .filter(s => { try { return s.cssRules || s.href; } catch(e) { return false; } })
-                .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : '')
-                .join('\n');
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
             // Sao chép nội dung báo cáo, bỏ wrapper tràn bảng
             const tempDiv = document.createElement('div');
@@ -231,26 +227,134 @@ document.addEventListener('DOMContentLoaded', () => {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${safeTopic} — FPT Software</title>
-${cssSheets}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
 <style>
-  body { background: var(--bg-primary, #0f172a); }
+  :root {
+    --fpt-blue: #0054a6;
+    --fpt-blue-light: #1a6dc7;
+    --fpt-orange: #e8621a;
+    --fpt-navy: #0f172a;
+    --text-primary: #0f172a;
+    --text-secondary: #4b5a6e;
+    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-code: 'Fira Code', monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #f1f4f8;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    line-height: 1.5;
+  }
   .report-page { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+
+  /* Header */
+  .export-header {
+    background: linear-gradient(135deg, #0054a6 0%, #1a6dc7 100%);
+    color: #ffffff;
+    padding: 28px 36px;
+    border-radius: 10px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 14px rgba(0,84,166,0.18);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .export-header .header-icon {
+    width: 48px; height: 48px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .export-header .header-text h1 {
+    font-size: 18px; font-weight: 700; margin-bottom: 4px; line-height: 1.3;
+  }
+  .export-header .header-text .meta {
+    font-size: 12px; opacity: 0.85; display: flex; gap: 16px; flex-wrap: wrap;
+  }
+  .export-header .header-text .meta i { margin-right: 4px; }
+
+  /* Markdown Report */
+  .markdown-report {
+    line-height: 1.75; color: #1e293b; font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    padding: 40px 50px; background: #ffffff;
+    border: 1px solid #e2e8f0; border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+    margin: 15px 0; max-width: 100%; width: 100%; overflow-x: hidden;
+  }
+  .markdown-report h1 { font-size: 22px; margin-bottom: 24px; font-weight: 800; text-transform: uppercase; text-align: center; color: #000000; }
+  .markdown-report h2 { font-size: 18px; margin-top: 32px; margin-bottom: 16px; font-weight: 700; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; }
+  .markdown-report h3 { font-size: 15px; margin-top: 22px; margin-bottom: 12px; font-weight: 600; color: #1e293b; }
+  .markdown-report h4 { font-size: 14px; margin-top: 18px; margin-bottom: 10px; font-weight: 700; color: #334155; }
+  .markdown-report h5 { font-size: 13px; margin-top: 16px; margin-bottom: 8px; font-weight: 700; color: #475569; }
+  .markdown-report h6 { font-size: 13px; margin-top: 14px; margin-bottom: 6px; font-weight: 600; font-style: italic; color: #64748b; }
+  .markdown-report p  { margin-bottom: 14px; font-size: 14.2px; color: #0f172a; line-height: 1.7; }
+  .markdown-report blockquote { border-left: 4px solid #94a3b8; padding: 8px 16px; margin: 16px 24px; color: #1e293b; font-style: italic; background: #f1f5f9; border-radius: 0 8px 8px 0; }
+  .markdown-report b, .markdown-report strong { color: #000000; font-weight: 700; }
+  .markdown-report ul, .markdown-report ol { margin-left: 24px; margin-bottom: 14px; font-size: 14.2px; color: #0f172a; }
+  .markdown-report li { margin-bottom: 8px; line-height: 1.6; }
+  .markdown-report ul ul, .markdown-report ol ul { margin-left: 20px; margin-top: 4px; margin-bottom: 4px; list-style-type: circle; }
+  .markdown-report ul ul li, .markdown-report ol ul li { font-size: 13.5px; color: #1e293b; }
+  .markdown-report .table-scroll-wrapper { overflow-x: auto; margin: 20px 0; border-top: 2px solid #000000; border-bottom: 2px solid #000000; }
+  .markdown-report table { display: table; width: 100%; min-width: 100%; table-layout: auto; border-collapse: collapse; margin: 0; font-size: 12.5px; border-top: none; border-bottom: none; word-wrap: normal; }
+  .markdown-report th, .markdown-report td { border: none; padding: 8px 12px; text-align: left; white-space: normal; word-wrap: normal; word-break: normal; overflow-wrap: break-word; min-width: 80px; }
+  .markdown-report th { border-bottom: 1px solid #000000; font-weight: 700; color: #000000; background: transparent; }
+  .markdown-report td { border-bottom: 0.5px solid #e5e7eb; color: #000000; }
+  .markdown-report table th:first-child:nth-last-child(5) { width: 8%; }
+  .markdown-report table th:nth-child(2):nth-last-child(4) { width: 17%; }
+  .markdown-report table th:nth-child(3):nth-last-child(3) { width: 10%; }
+  .markdown-report table th:nth-child(4):nth-last-child(2) { width: 30%; }
+  .markdown-report table th:nth-child(5):nth-last-child(1) { width: 35%; }
+  .markdown-report code { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 3px; padding: 2px 4px; font-family: 'Fira Code', monospace; font-size: 11px; color: #111827; }
+  .markdown-report pre { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin: 16px 0; }
+  .markdown-report pre code { padding: 0; background: transparent; border: none; font-size: 11px; color: #111827; }
+  .markdown-report img { max-width: 100%; height: auto; display: block; margin: 16px auto; }
+
+  /* Footer */
+  .export-footer {
+    text-align: center; padding: 18px; color: #94a3b8; font-size: 11px; margin-top: 16px;
+  }
+  .export-footer i { margin-right: 4px; }
+
+  @media print { .export-header { break-inside: avoid; } }
 </style>
 </head>
 <body>
 <div class="report-page">
+  <div class="export-header">
+    <div class="header-icon"><i class="fa-solid fa-file-lines"></i></div>
+    <div class="header-text">
+      <h1><i class="fa-solid fa-chart-line" style="margin-right:6px;"></i>${safeTopic}</h1>
+      <div class="meta">
+        <span><i class="fa-solid fa-building"></i> FPT Software</span>
+        <span><i class="fa-solid fa-robot"></i> Multi-Agent AI System</span>
+        <span><i class="fa-solid fa-calendar"></i> ${dateStr}</span>
+      </div>
+    </div>
+  </div>
   <div class="markdown-report">${tempDiv.innerHTML}</div>
+  <div class="export-footer">
+    <i class="fa-solid fa-shield-halved"></i> Báo cáo được tạo tự động bởi hệ thống Multi-Agent AI — FPT Software &copy; ${now.getFullYear()}
+  </div>
 </div>
 </body>
 </html>`;
 
-            const w = window.open('', '_blank');
-            if (w) {
-                w.document.write(htmlContent);
-                w.document.close();
-            } else {
-                alert('Trình duyệt đã chặn cửa sổ mới. Vui lòng cho phép popup.');
-            }
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const safeName = topic.replace(/[^a-zA-Z0-9\u00C0-\u024F\u1E00-\u1EFF\s-]/g, '').replace(/\s+/g, '_').substring(0, 60);
+            a.download = `BaoCao_${safeName}_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         });
     }
 
