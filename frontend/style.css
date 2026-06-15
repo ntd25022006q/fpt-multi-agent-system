@@ -868,12 +868,12 @@ body {
     line-height: 1.7;
 }
 .markdown-report blockquote {
-    border-left: 4px solid #f97316;
+    border-left: 4px solid #94a3b8; /* Slate gray border */
     padding: 8px 16px;
     margin: 16px 24px;
     color: #1e293b; /* Rõ nét hơn */
     font-style: italic;
-    background: #fff7ed;
+    background: #f1f5f9; /* Slate gray background */
     border-radius: 0 8px 8px 0;
 }
 .markdown-report b, .markdown-report strong {

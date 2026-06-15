@@ -1120,6 +1120,57 @@ ${bodyContent}
             code = code.replace(/(?<!-)->(?!>)/g, '-->');
         }
 
+        // 2.5. Remove duplicate shape definitions on nodes in connection links (causes syntax error in Mermaid)
+        let definedNodes = new Set();
+        let lines = code.split('\n');
+        let processedLines = [];
+        for (let line of lines) {
+            let trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('%%')) {
+                processedLines.push(line);
+                continue;
+            }
+            let isLink = /-->|---|==>|-.->/g.test(trimmed);
+            let nodeRegex = /(\w+[-\w]*)(?:\["([^"]*)"\]|\[([^\]]*)\]|\("([^"]*)"\)|\(([^)]*)\)|\{"([^"]*)"\}|\{([^}]*)\})/g;
+            if (isLink) {
+                let newLine = line.replace(nodeRegex, (match, id, q1, u1, q2, u2, q3, u3) => {
+                    let lbl = q1 || u1 || q2 || u2 || q3 || u3 || '';
+                    if (definedNodes.has(id)) {
+                        return id;
+                    } else {
+                        definedNodes.add(id);
+                        return match;
+                    }
+                });
+                processedLines.push(newLine);
+            } else {
+                let match;
+                while ((match = nodeRegex.exec(trimmed)) !== null) {
+                    definedNodes.add(match[1]);
+                }
+                processedLines.push(line);
+            }
+        }
+        code = processedLines.join('\n');
+
+        // 2.6. Sanitize all double-quoted labels to prevent nested parentheses/quotes from breaking parser
+        code = code.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g, (match, content) => {
+            let clean = content;
+            clean = clean.replace(/<br\s*\/?>/gi, '__BR_TAG__');
+            clean = clean.replace(/\(/g, '（')
+                         .replace(/\)/g, '）')
+                         .replace(/\[/g, '［')
+                         .replace(/\]/g, '］')
+                         .replace(/\{/g, '｛')
+                         .replace(/\}/g, '｝')
+                         .replace(/</g, '＜')
+                         .replace(/>/g, '＞')
+                         .replace(/'/g, '’')
+                         .replace(/"/g, '”');
+            clean = clean.replace(/__BR_TAG__/g, '<br/>');
+            return `"${clean}"`;
+        });
+
         // 3. Sanitize parentheses & brackets inside node labels to prevent parse errors.
         //    Pattern: NodeID[Label containing (bad) chars] or NodeID(Label)
         code = code.replace(/(\w+)\[([^\]]*)\]/g, (match, id, label) => {
