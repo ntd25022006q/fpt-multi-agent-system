@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const runBtn           = document.getElementById('run-btn');
     const downloadGroup    = document.getElementById('download-group');
     const downloadPdfBtn   = document.getElementById('download-pdf-btn');
-    const downloadDocxBtn  = document.getElementById('download-docx-btn');
     const downloadDiagBtn  = document.getElementById('download-diagram-btn');
     const downloadMdBtn    = document.getElementById('download-md-btn');
 
@@ -254,7 +253,7 @@ ${bodyContent}
 </html>`;
     }
 
-    // ── 1. PDF Export (using html2pdf.js) ─────────────────────────────────────
+    // ── 1. Xuất báo cáo chi tiết (PDF) ──────────────────────────────────────
     if (downloadPdfBtn) {
         downloadPdfBtn.addEventListener('click', () => {
             if (!currentMarkdown || currentMarkdown.includes('not generated yet') || currentMarkdown.includes('Báo cáo chưa được tạo') || currentMarkdown.includes('IRRELEVANT') || currentMarkdown.includes('Không áp dụng')) {
@@ -263,10 +262,16 @@ ${bodyContent}
             }
 
             const origHTML = downloadPdfBtn.innerHTML;
-            downloadPdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xuất PDF…';
+            downloadPdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xuất báo cáo…';
             downloadPdfBtn.disabled = true;
 
             try {
+                if (typeof html2pdf === 'undefined') {
+                    alert('Thư viện xuất PDF chưa sẵn sàng. Vui lòng tải lại trang và thử lại!');
+                    downloadPdfBtn.innerHTML = origHTML;
+                    downloadPdfBtn.disabled = false;
+                    return;
+                }
                 const printHtml = buildPrintHTML(reportView.innerHTML, topicInput?.value || '');
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = printHtml;
@@ -289,151 +294,22 @@ ${bodyContent}
                     downloadPdfBtn.innerHTML = origHTML;
                     downloadPdfBtn.disabled = false;
                 }).catch(err => {
-                    document.body.removeChild(tempDiv);
-                    console.error('PDF export error:', err);
-                    alert(`Lỗi tạo PDF: ${err.message}`);
+                    if (document.body.contains(tempDiv)) document.body.removeChild(tempDiv);
+                    console.error('Lỗi xuất PDF:', err);
+                    alert(`Lỗi xuất PDF: ${err.message}`);
                     downloadPdfBtn.innerHTML = origHTML;
                     downloadPdfBtn.disabled = false;
                 });
             } catch (err) {
-                console.error('PDF export error:', err);
-                alert(`Lỗi tạo PDF: ${err.message}`);
+                console.error('Lỗi xuất PDF:', err);
+                alert(`Lỗi xuất PDF: ${err.message}`);
                 downloadPdfBtn.innerHTML = origHTML;
                 downloadPdfBtn.disabled = false;
             }
         });
     }
 
-    // ── 2. Word (DOCX) Export ─────────────────────────────────────────────────
-    if (downloadDocxBtn) {
-        downloadDocxBtn.addEventListener('click', () => {
-            if (!currentMarkdown || currentMarkdown.includes('not generated yet') || currentMarkdown.includes('Báo cáo chưa được tạo') || currentMarkdown.includes('IRRELEVANT') || currentMarkdown.includes('Không áp dụng')) {
-                alert('Chưa có báo cáo hợp lệ. Yêu cầu bị từ chối hoặc chưa chạy quy trình!');
-                return;
-            }
-
-            const origHTML = downloadDocxBtn.innerHTML;
-            downloadDocxBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xuất Word…';
-            downloadDocxBtn.disabled = true;
-
-            try {
-                // Get the report content
-                let reportContentHTML = reportView.innerHTML;
-                
-                // Wrap in standard Word styles and document shell so Word renders tables, margins, and fonts properly
-                const wordHtml = `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <meta charset="utf-8">
-                        <title>Báo cáo chi tiết</title>
-                        <style>
-                            body {
-                                font-family: 'Times New Roman', Times, serif;
-                                font-size: 12pt;
-                                line-height: 1.5;
-                                color: #000000;
-                                margin: 0;
-                                padding: 0;
-                                width: 100%;
-                            }
-                            h1, h2, h3, h4, h5, h6 {
-                                font-family: 'Times New Roman', Times, serif;
-                                color: #000000;
-                                font-weight: bold;
-                                margin-top: 16pt;
-                                margin-bottom: 8pt;
-                            }
-                            h1 {
-                                font-size: 18pt;
-                                text-align: center;
-                                margin-top: 20pt;
-                                margin-bottom: 12pt;
-                            }
-                            h2 {
-                                font-size: 14pt;
-                                border-bottom: 1px solid #000000;
-                                padding-bottom: 3px;
-                            }
-                            h3 { font-size: 12pt; }
-                            h4 { font-size: 11pt; }
-                            p {
-                                font-size: 12pt;
-                                margin-top: 0;
-                                margin-bottom: 10pt;
-                                text-align: justify;
-                            }
-                            table {
-                                width: 100%;
-                                border-collapse: collapse;
-                                margin-top: 12pt;
-                                margin-bottom: 12pt;
-                                table-layout: auto;
-                            }
-                            th, td {
-                                border: 1px solid #000000;
-                                padding: 8px 10px;
-                                font-size: 11pt;
-                                vertical-align: top;
-                                word-break: normal;
-                                word-wrap: normal;
-                                overflow-wrap: break-word;
-                            }
-                            th {
-                                background-color: #f2f2f2;
-                                font-weight: bold;
-                                text-align: left;
-                            }
-                            ul, ol {
-                                margin-top: 0;
-                                margin-bottom: 10pt;
-                                padding-left: 20pt;
-                            }
-                            li { font-size: 12pt; margin-bottom: 4pt; }
-                            blockquote {
-                                margin: 10pt 0;
-                                padding-left: 15pt;
-                                border-left: 3px solid #666666;
-                                color: #333333;
-                                font-style: italic;
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        ${reportContentHTML}
-                    </body>
-                    </html>
-                `;
-
-                // Convert HTML to docx blob
-                const converted = htmlDocx.asBlob(wordHtml);
-                
-                // Trigger download
-                const url = URL.createObjectURL(converted);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `BaoCao_ChiTiet_${new Date().toISOString().slice(0,10)}.docx`;
-                document.body.appendChild(a);
-                a.click();
-                
-                // Cleanup
-                setTimeout(() => {
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                }, 100);
-
-                downloadDocxBtn.innerHTML = origHTML;
-                downloadDocxBtn.disabled = false;
-            } catch (err) {
-                console.error('Docx export error:', err);
-                alert(`Lỗi tạo Word: ${err.message}`);
-                downloadDocxBtn.innerHTML = origHTML;
-                downloadDocxBtn.disabled = false;
-            }
-        });
-    }
-
-    // ── 3. Diagram Download (PNG via Canvas) ──────────────────────────────────
+    // ── 2. Xuất sơ đồ quy trình (PNG) ─────────────────────────────────────
     if (downloadDiagBtn) {
         downloadDiagBtn.addEventListener('click', async () => {
             if (uploadedDiagramDataUrl) {
@@ -627,7 +503,7 @@ ${bodyContent}
         reportView.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02)';
         reportView.style.maxWidth = '100%';
         reportView.style.margin = '5px 0';
-        const reasonText = reason || 'Yêu cầu nằm ngoài phạm vi hỗ trợ của hệ thống.';
+        const reasonText = (reason || 'Yêu cầu nằm ngoài phạm vi hỗ trợ của hệ thống.').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         reportView.innerHTML = `
             <div style="text-align: center; padding: 20px 0;">
                 <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
@@ -1208,8 +1084,8 @@ ${bodyContent}
         statStatus.style.color = 'var(--fpt-orange)';
     }
 
-    function queuePrint(node, content, duration, tokens, thinking) {
-        printQueue.push({ node, content, duration, tokens, thinking });
+    function queuePrint(node, content, duration, tokens, thinking, model = '', toksPerSec = 0) {
+        printQueue.push({ node, content, duration, tokens, thinking, model, toks_per_sec: toksPerSec });
         if (!isPrinting) processQueue();
     }
 
@@ -2418,7 +2294,7 @@ ${bodyContent}
                     // Add system log entry
                     const log = document.createElement('div');
                     log.className = 'console-log';
-                    log.innerHTML = `<span style="color: var(--accent-recommender); font-weight: bold;">[Hệ Thống]</span> Đã nhận diện hình ảnh sơ đồ quy trình: <strong>${fileName}</strong>.`;
+                    log.innerHTML = `<span style="color: var(--accent-recommender); font-weight: bold;">[Hệ Thống]</span> Đã nhận diện hình ảnh sơ đồ quy trình: <strong>${fileName.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</strong>.`;
                     consoleOutput.appendChild(log);
                     consoleOutput.scrollTop = consoleOutput.scrollHeight;
                 };
@@ -2450,7 +2326,7 @@ ${bodyContent}
                     // Add system log entry
                     const log = document.createElement('div');
                     log.className = 'console-log';
-                    log.innerHTML = `<span style="color: var(--accent-recommender); font-weight: bold;">[Hệ Thống]</span> Đã tải lên tài liệu báo cáo: <strong>${fileName}</strong>.`;
+                    log.innerHTML = `<span style="color: var(--accent-recommender); font-weight: bold;">[Hệ Thống]</span> Đã tải lên tài liệu báo cáo: <strong>${fileName.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</strong>.`;
                     consoleOutput.appendChild(log);
                     consoleOutput.scrollTop = consoleOutput.scrollHeight;
                 };
