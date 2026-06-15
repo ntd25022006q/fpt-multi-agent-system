@@ -118,14 +118,16 @@ class SimpleRecursiveCharacterTextSplitter:
         if not separators:
             # If no separators left, split by size
             chunks = []
-            for i in range(0, len(text), self.chunk_size - self.chunk_overlap):
+            step = max(1, self.chunk_size - self.chunk_overlap)
+            for i in range(0, len(text), step):
                 chunks.append(text[i:i + self.chunk_size])
             return chunks
 
         separator = separators[0]
         # Handle empty separator (char-by-char split)
         if separator == "":
-            return [text[i:i + self.chunk_size] for i in range(0, len(text), self.chunk_size - self.chunk_overlap)]
+            step = max(1, self.chunk_size - self.chunk_overlap)
+            return [text[i:i + self.chunk_size] for i in range(0, len(text), step)]
 
         splits = text.split(separator)
         chunks = []
