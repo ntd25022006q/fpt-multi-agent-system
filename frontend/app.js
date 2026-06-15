@@ -203,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Xuất báo cáo chi tiết (tải file HTML) ─────────────────────────────────
     if (downloadPdfBtn) {
         downloadPdfBtn.addEventListener('click', () => {
-            if (!currentMarkdown || currentMarkdown.includes('not generated yet') || currentMarkdown.includes('Báo cáo chưa được tạo') || currentMarkdown.includes('IRRELEVANT') || currentMarkdown.includes('Không áp dụng')) {
+            if (!currentMarkdown || currentMarkdown.includes('not generated yet') || currentMarkdown.includes('Báo cáo chưa được tạo') || currentMarkdown.trim().startsWith('# Không áp dụng') || currentMarkdown.trim().startsWith('# IRRELEVANT')) {
                 alert('Chưa có báo cáo hợp lệ. Vui lòng chạy quy trình trước!');
                 return;
             }
@@ -651,26 +651,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const reasonText = (reason || 'Yêu cầu nằm ngoài phạm vi hỗ trợ của hệ thống.').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         reportView.innerHTML = `
             <div style="text-align: center; padding: 20px 0;">
-                <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
-                    <i class="fa-solid fa-shield-halved" style="font-size: 28px; color: #dc2626;"></i>
-                </div>
-                <h1 style="font-size: 20px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px 0;">Không áp dụng (IRRELEVANT)</h1>
-                <p style="font-size: 14px; color: #64748b; line-height: 1.7; max-width: 500px; margin: 0 auto 20px auto;">
-                    Yêu cầu của bạn đã bị <strong style="color: #dc2626;">từ chối</strong> vì nằm ngoài phạm vi hỗ trợ của hệ thống Multi-Agent FPT Software.
+                <h1 style="font-size: 20px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 16px 0;">Không áp dụng</h1>
+                <p style="font-size: 14px; color: #0f172a; line-height: 1.7; max-width: 500px; margin: 0 auto;">
+                    ${reasonText}
                 </p>
-                <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; text-align: left; max-width: 520px; margin: 0 auto 16px auto;">
-                    <p style="font-size: 12px; font-weight: 700; color: #991b1b; margin: 0 0 6px 0;"><i class="fa-solid fa-circle-exclamation" style="margin-right: 4px;"></i> Lý do từ chối:</p>
-                    <p style="font-size: 13px; color: #7f1d1d; margin: 0; line-height: 1.6;">${reasonText}</p>
-                </div>
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; text-align: left; max-width: 520px; margin: 0 auto;">
-                    <p style="font-size: 12px; font-weight: 700; color: #334155; margin: 0 0 8px 0;"><i class="fa-solid fa-circle-info" style="margin-right: 4px;"></i> Phạm vi hỗ trợ:</p>
-                    <ul style="font-size: 12px; color: #475569; margin: 0; padding-left: 18px; line-height: 1.8;">
-                        <li>Kiến trúc phần mềm & kỹ thuật (microservices, cloud, database)</li>
-                        <li>Chiến lược công nghệ doanh nghiệp, chuyển đổi số</li>
-                        <li>Thông tin FPT Software: dự án, phòng lab, tài chính, sáng kiến</li>
-                        <li>Tư vấn kỹ thuật hoặc câu hỏi về kỹ thuật phần mềm</li>
-                    </ul>
-                </div>
             </div>
         `;
     };
@@ -731,11 +715,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         mermaidOutput.innerHTML = `
             <div style="text-align: center; padding: 20px 0;">
-                <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px auto;">
-                    <i class="fa-solid fa-diagram-project" style="font-size: 24px; color: #dc2626;"></i>
-                </div>
-                <h1 style="font-size: 16px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 8px 0;">Sơ đồ không áp dụng (IRRELEVANT)</h1>
-                <p style="font-size: 13px; color: #64748b; line-height: 1.6; max-width: 400px; margin: 0 auto;">
+                <h1 style="font-size: 16px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 10px 0;">Sơ đồ không áp dụng</h1>
+                <p style="font-size: 13px; color: #0f172a; line-height: 1.6; max-width: 400px; margin: 0 auto;">
                     Yêu cầu bị từ chối nên không tạo sơ đồ quy trình.
                 </p>
             </div>
@@ -1487,7 +1468,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fetch(getApiPrefix() + '/api/report?t=' + Date.now())
                 .then(res => { if (!res.ok) throw new Error(); return res.json(); })
                 .then(data => {
-                    const isIrrelevantReport = data.report && (data.report.includes('IRRELEVANT') || data.report.includes('Không áp dụng'));
+                    const isIrrelevantReport = data.report && (data.report.trim().startsWith('# Không áp dụng') || data.report.trim().startsWith('# IRRELEVANT'));
                     if (data.report && (isIrrelevantReport || (!data.report.includes('Báo cáo chưa được tạo') && data.report.trim().length > 100))) {
                         clearInterval(pollingInterval);
                         hasCompletedSuccessfully = true;
@@ -2298,8 +2279,13 @@ document.addEventListener('DOMContentLoaded', () => {
         currentMarkdown = reportText;
         if (rawMarkdownText) rawMarkdownText.value = reportText;
         
-        // Check if this is an irrelevant/rejected report
-        const isIrrelevant = reportText.includes('IRRELEVANT') || reportText.includes('Không áp dụng') || reportText.includes('bị từ chối');
+        // Check if this is a genuine irrelevant/rejected report
+        // Only match if the report starts with the rejection heading (guardrail rejection format)
+        // This prevents false positives where a fully-analyzed report mentions "Không áp dụng" in context
+        const reportFirstLine = reportText.trim().split('\n')[0].trim();
+        const isIrrelevant = /^#\s*(Không áp dụng|IRRELEVANT)/i.test(reportFirstLine) ||
+                             reportText.trim().startsWith('# Không áp dụng') ||
+                             reportText.trim().startsWith('# IRRELEVANT');
 
         reportView.style.cssText = '';
         if (isIrrelevant) {

@@ -151,7 +151,7 @@ async def guardrail_node(state: ResearchState, config: RunnableConfig = None) ->
             "irrelevant": True,
             "query_type": "consulting",
             "language": "vi",
-            "report": "# Không áp dụng (IRRELEVANT)\n\nYêu cầu của bạn đã bị từ chối vì nằm ngoài phạm vi hỗ trợ của hệ thống Multi-Agent FPT Software.\n\n**Lý do từ chối:** " + reason + "\n\n---\n\n### Phạm vi hỗ trợ của hệ thống\n\nHệ thống chỉ xử lý các yêu cầu liên quan đến:\n- Kiến trúc phần mềm & kỹ thuật (ví dụ: microservices, di chuyển cloud, lựa chọn cơ sở dữ liệu)\n- Chiến lược công nghệ doanh nghiệp, chuyển đổi số, vận hành CNTT\n- Thông tin về FPT Software: dự án nghiên cứu, phòng lab, chỉ số tài chính, sáng kiến\n- Tư vấn kỹ thuật hoặc câu hỏi về kỹ thuật phần mềm\n\nVui lòng gửi lại yêu cầu trong phạm vi trên để được hỗ trợ.",
+            "report": "# Không áp dụng\n\n" + reason,
             "messages": [response]
         }
         
