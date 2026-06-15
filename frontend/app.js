@@ -32,9 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Stop element
     const stopBtn = document.getElementById('stop-btn');
 
-    const serverSettingsBtn = null;
-    const serverSettingsGroup = null;
-    const serverUrlInput = null;
+    // Settings panel removed — API prefix auto-detected, no manual config needed
     const ollamaKeyInput = null;
     const openrouterKeyInput = null;
 
@@ -45,6 +43,29 @@ document.addEventListener('DOMContentLoaded', () => {
             return window.location.origin;
         }
         return 'https://fpt-multi-agent-system.onrender.com';
+    }
+
+    function checkServerConnection() {
+        const dot = document.getElementById('connection-status-dot');
+        if (!dot) return;
+
+        const url = getApiPrefix() + '/api/report';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        fetch(url, { method: 'GET', signal: controller.signal })
+            .then(res => {
+                clearTimeout(timeoutId);
+                dot.style.backgroundColor = '#10b981';
+                dot.style.boxShadow = '0 0 8px #10b981';
+                dot.title = 'Máy chủ đang hoạt động (Online)';
+            })
+            .catch(err => {
+                clearTimeout(timeoutId);
+                dot.style.backgroundColor = '#ef4444';
+                dot.style.boxShadow = '0 0 8px #ef4444';
+                dot.title = 'Không thể kết nối máy chủ (Offline)';
+            });
     }
 
     let currentZoom = 100;
@@ -2536,7 +2557,9 @@ document.addEventListener('DOMContentLoaded', () => {
         consoleOutput.classList.add('hide-analysis-suffix');
     }
 
-    // Removed: checkServerConnection() — settings panel removed, auto-detect API prefix
+    // Check server connection on load and every 15 seconds
+    checkServerConnection();
+    setInterval(checkServerConnection, 15000);
 
     initializeOrSyncWithServer();
 });
