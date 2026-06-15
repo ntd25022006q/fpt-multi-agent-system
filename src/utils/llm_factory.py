@@ -98,24 +98,7 @@ def start_latency_checker():
     t = threading.Thread(target=worker, daemon=True)
     t.start()
 
-class HeadroomRunnableWrapper:
-    """Wrapper that intercepts LangChain invoke/ainvoke calls and compresses messages using headroom."""
-    def __init__(self, bound_llm, model_name: str):
-        self.bound_llm = bound_llm
-        self.model_name = model_name
-
-    def invoke(self, input, config=None, **kwargs):
-        from src.utils.headroom_helper import compress_messages
-        compressed_input = compress_messages(input, model=self.model_name)
-        return self.bound_llm.invoke(compressed_input, config=config, **kwargs)
-
-    async def ainvoke(self, input, config=None, **kwargs):
-        from src.utils.headroom_helper import compress_messages
-        compressed_input = compress_messages(input, model=self.model_name)
-        return await self.bound_llm.ainvoke(compressed_input, config=config, **kwargs)
-
-    def __getattr__(self, name):
-        return getattr(self.bound_llm, name)
+# Headroom compression removed — no longer needed
 
 
 def create_llm(model: str, temperature: float = 0.2, max_tokens: int = 2000, streaming: bool = False, config = None):
@@ -217,7 +200,7 @@ def create_llm(model: str, temperature: float = 0.2, max_tokens: int = 2000, str
             )
         
     llm = primary_llm.with_fallbacks(fallbacks=fallbacks)
-    return HeadroomRunnableWrapper(llm, model)
+    return llm
 
 def get_actual_model_used(node_name: str, default_model: str) -> str:
     """Return the actual model name recorded for a node (set by QueueCallbackHandler)."""

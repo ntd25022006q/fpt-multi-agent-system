@@ -8,4 +8,4 @@ rich==14.0.0
 pydantic==2.11.5
 fastapi>=0.100.0
 uvicorn>=0.20.0
-headroom-ai
+# headroom-ai removed — no longer needed
