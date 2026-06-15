@@ -389,6 +389,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 cloned.style.transform = 'none';
                 cloned.style.transformOrigin = 'unset';
                 cloned.style.transition = 'none';
+                cloned.style.display = 'block';
+                cloned.style.margin = '0 auto';
+                cloned.style.width = '100%';
 
                 // Strip the ID prefix (e.g. #mermaid-12345) from selectors in style blocks
                 const id = svgEl.getAttribute('id');
@@ -1365,13 +1368,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const { svg } = await mermaid.render(uniqueId, code);
             mermaidOutput.innerHTML = svg;
             
-            // Adjust SVG styles for scaling
+            // Center the SVG diagram and ensure proper sizing
             const renderedSvg = document.getElementById(uniqueId);
             if (renderedSvg) {
                 renderedSvg.style.transition = 'transform 0.15s ease-out';
                 renderedSvg.style.maxWidth = 'none';
                 renderedSvg.style.height = 'auto';
+                renderedSvg.style.display = 'block';
+                renderedSvg.style.margin = '0 auto';
+                renderedSvg.style.width = '100%';
             }
+            // Ensure the container centers content
+            mermaidOutput.style.display = 'flex';
+            mermaidOutput.style.flexDirection = 'column';
+            mermaidOutput.style.alignItems = 'center';
+            mermaidOutput.style.justifyContent = 'center';
         } catch (err) {
             console.error('Mermaid error:', err);
             let displayErr = `Lỗi biên dịch sơ đồ: ${err.message}`;
@@ -2517,40 +2528,9 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.removeItem('fpt_active_search');
 
     function initializeOrSyncWithServer() {
-        fetch(getApiPrefix() + '/api/report?t=' + Date.now())
-            .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
-            .then(data => {
-                if (!data.report) {
-                    showUncreatedReportCard();
-                    showUncreatedDiagramCard();
-                    return;
-                }
-
-                const isIrrelevantOnInit = data.report.trim().startsWith('# Không áp dụng') ||
-                                           data.report.trim().startsWith('# IRRELEVANT');
-                const isPlaceholder = data.report.includes('Báo cáo chưa được tạo') || 
-                                      data.report.includes('Report not created') || 
-                                      data.report.includes('not generated yet') ||
-                                      data.report.includes('Request Rejected');
-
-                if (isIrrelevantOnInit || !isPlaceholder) {
-                    let topic = 'Phân tích hệ thống';
-                    const match = data.report.match(/^#\s+(.+)$/m);
-                    if (match && match[1]) {
-                        topic = match[1].trim();
-                    }
-
-                    displayReportData(data);
-                } else {
-                    showUncreatedReportCard();
-                    showUncreatedDiagramCard();
-                }
-            })
-            .catch(err => {
-                console.error('Initial sync error:', err);
-                showUncreatedReportCard();
-                showUncreatedDiagramCard();
-            });
+        // Always start with a clean state — never restore old session data on new tab open
+        showUncreatedReportCard();
+        showUncreatedDiagramCard();
     }
 
     if (consoleOutput && hideAnalysisLogText) {
