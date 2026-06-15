@@ -27,14 +27,21 @@ app = FastAPI(title="FPT Software AI-First Research & Detailed Report Dashboard"
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "https://fpt-multi-agent-system.onrender.com",
+        "https://fpt-multi-agent-system.vercel.app",
+    ],
     allow_credentials=False,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
 STATIC_DIR = Path(WORKSPACE_DIR) / "static"
 STATIC_DIR.mkdir(exist_ok=True)
+(STATIC_DIR / "lib").mkdir(parents=True, exist_ok=True)
+(STATIC_DIR / "webfonts").mkdir(parents=True, exist_ok=True)
 
 # Mount static assets under /assets (CSS, JS, fonts etc.)
 # We do NOT mount at "/" to avoid swallowing /api/* routes
@@ -211,6 +218,11 @@ def download_markdown():
 @app.get("/api/run")
 async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: str = ""):
     """LangGraph multi-agent pipeline via Server-Sent Events."""
+    # Xác thực đầu vào
+    if not topic or not topic.strip():
+        return {"error": "Chủ đề không được để trống."}
+    if len(topic) > 5000:
+        return {"error": "Chủ đề vượt quá giới hạn 5000 ký tự."}
 
     async def event_generator():
         initial_state = {
@@ -268,8 +280,8 @@ async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: s
                     "type": "done_sentinel"
                 })
 
-        # Start execution in the background
-        asyncio.create_task(run_graph_task())
+        # Start execution in the background — lưu reference để tránh GC thu hồi task
+        graph_task = asyncio.create_task(run_graph_task())
 
         start_time = time.time()
         agent_tokens = {
@@ -307,6 +319,11 @@ async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: s
 
         try:
             while True:
+                if graph_task.done() and graph_task.exception():
+                    # Nếu task bị lỗi, truyền lỗi ra SSE
+                    exc = graph_task.exception()
+                    yield f"data: {json.dumps({'error': str(exc)}, ensure_ascii=False)}\n\n"
+                    break
                 try:
                     event = await asyncio.wait_for(stream_queue.get(), timeout=10.0)
                 except asyncio.TimeoutError:

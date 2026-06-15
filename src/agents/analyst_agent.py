@@ -83,7 +83,7 @@ async def analyst_node(state: ResearchState, config: RunnableConfig = None) -> d
     tokens = 0
     if hasattr(response, "usage_metadata") and response.usage_metadata:
         tokens = response.usage_metadata.get("total_tokens", 0)
-    elif "token_usage" in response.response_metadata:
+    elif hasattr(response, "response_metadata") and "token_usage" in response.response_metadata:
         tokens = response.response_metadata.get("token_usage", {}).get("total_tokens", 0)
         
     if tokens == 0:

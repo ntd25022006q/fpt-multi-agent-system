@@ -55,7 +55,7 @@ def clean_internal_filenames(text: str) -> str:
         pattern = re.compile(r'\b' + re.escape(name_no_ext) + r'\b', re.IGNORECASE)
         text = pattern.sub(title, text)
         
-    # Double check if any raw markdown extension files leak:
-    text = re.sub(r'\b[a-zA-Z0-9_-]+\.(?:md|txt)\b', '', text)
+    # Double check if any raw markdown extension files leak (chỉ khớp tên file nội bộ đã biết, không khớp URL hay README.md hợp lệ)
+    text = re.sub(r'\b(?!README|CHANGELOG|LICENSE|CONTRIBUTING|requirements)[a-z0-9_-]+\.(?:md|txt)\b', '', text)
     
     return text
