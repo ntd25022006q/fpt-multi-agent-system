@@ -588,6 +588,27 @@ ${bodyContent}
         `;
     };
 
+    const showDiagramOnlyReportCard = () => {
+        reportView.className = 'markdown-report';
+        reportView.style.border = '1px solid #e2e8f0';
+        reportView.style.borderRadius = '8px';
+        reportView.style.background = '#ffffff';
+        reportView.style.padding = '40px 30px';
+        reportView.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02)';
+        reportView.style.maxWidth = '100%';
+        reportView.style.margin = '5px 0';
+        reportView.innerHTML = `
+            <div style="text-align: center; color: var(--text-muted); padding: 20px 0;">
+                <i class="fa-solid fa-file-circle-exclamation" style="font-size: 48px; color: var(--fpt-blue); margin-bottom: 16px;"></i>
+                <h3 style="margin: 0 0 10px 0; color: var(--text-primary); font-size: 16px; font-weight: 700;">Nội dung chính là Sơ đồ Quy trình</h3>
+                <p style="margin: 0 auto; font-size: 13px; max-width: 420px; line-height: 1.6; color: var(--text-secondary);">
+                    Yêu cầu của bạn tập trung vào việc mô tả hoặc vẽ sơ đồ quy trình. 
+                    Vui lòng chuyển sang tab <strong>Sơ Đồ Quy Trình</strong> ở bên trên để xem trực quan sơ đồ động và bản phân tích kiến trúc chi tiết.
+                </p>
+            </div>
+        `;
+    };
+
     const showUncreatedDiagramCard = () => {
         const toolbar = document.querySelector('.diagram-toolbar');
         if (toolbar) toolbar.style.display = 'none';
@@ -1101,11 +1122,21 @@ ${bodyContent}
 
         // 3. Sanitize parentheses & brackets inside node labels to prevent parse errors.
         //    Pattern: NodeID[Label containing (bad) chars] or NodeID(Label)
-        //    Replace literal ( ) inside bracket node labels with harmless equivalents.
         code = code.replace(/(\w+)\[([^\]]*)\]/g, (match, id, label) => {
-            const clean = label.replace(/\(/g, '（').replace(/\)/g, '）');
-            return `${id}["${clean.replace(/"/g, "'")}"]`;
+            let clean = label.trim();
+            if (clean.startsWith('"') && clean.endsWith('"')) clean = clean.slice(1, -1);
+            if (clean.startsWith("'") && clean.endsWith("'")) clean = clean.slice(1, -1);
+            clean = clean.replace(/\(/g, '（').replace(/\)/g, '）').replace(/"/g, '”').replace(/'/g, '’');
+            return `${id}["${clean}"]`;
         });
+        code = code.replace(/(\w+)\(([^)]*)\)/g, (match, id, label) => {
+            let clean = label.trim();
+            if (clean.startsWith('"') && clean.endsWith('"')) clean = clean.slice(1, -1);
+            if (clean.startsWith("'") && clean.endsWith("'")) clean = clean.slice(1, -1);
+            clean = clean.replace(/\[/g, '［').replace(/\]/g, '］').replace(/"/g, '”').replace(/'/g, '’');
+            return `${id}("${clean}")`;
+        });
+
 
         // 4. Strip any raw HTML tags that could slip in
         code = code.replace(/<[^>]+>/g, '');
@@ -2032,9 +2063,12 @@ ${bodyContent}
         reportView.style.cssText = '';
         if (reportText.includes('Báo cáo chưa được tạo') || reportText.includes('Report not created') || reportText.includes('not generated yet')) {
             showUncreatedReportCard();
+        } else if (reportText.trim().length === 0 || reportText.trim() === explanationText.trim()) {
+            showDiagramOnlyReportCard();
         } else {
             renderMarkdownReport(reportText);
         }
+
         
         try {
             if (diagramText) {

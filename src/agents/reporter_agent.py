@@ -118,6 +118,7 @@ QUY TẮC CÚ PHÁP MERMAID QUAN TRỌNG:
 1. Bạn PHẢI bọc tất cả các nhãn nút Mermaid chứa ký tự đặc biệt (như gạch chéo `/`, dấu ngoặc đơn `()`, dấu ngoặc vuông `[]`, gạch ngang `-`, khoảng trắng, hoặc dấu hai chấm `:`) trong dấu nháy kép. Ví dụ: id["Label (Extra Info)"]
 2. Không sử dụng các thẻ HTML như <br> hoặc <br/> trong các nút hoặc nhãn. Sử dụng plain text hoặc \n cho xuống dòng trong dấu nháy kép.
 3. Giữ bố cục sơ đồ đơn giản, theo chiều dọc (flowchart TD) và sạch các nút.
+4. Chỉ định nghĩa nhãn nút một lần duy nhất khi tạo nút (ví dụ: A["Nhãn nút"]). Khi tạo các liên kết sau đó, chỉ sử dụng ID của nút (ví dụ: A --> B), tuyệt đối không lặp lại nhãn nút bên trong liên kết (không viết A["Nhãn"] --> B["Nhãn"] vì sẽ gây lỗi biên dịch).
 
 QUAN TRỌNG VỀ ĐỊNH DẠNG LATEX:
 - Bạn PHẢI sử dụng định dạng LaTeX cho tất cả các công thức toán học, số liệu định lượng, chỉ số kỹ thuật, phương trình hoặc phép tính (ví dụ: công thức tính KPI, tỷ lệ phần trăm, độ trễ, băng thông, so sánh hiệu năng, hoặc độ phức tạp thuật toán).
@@ -231,6 +232,7 @@ QUY TẮC CÚ PHÁP MERMAID QUAN TRỌNG:
 1. Bạn PHẢI bọc tất cả các nhãn nút Mermaid chứa ký tự đặc biệt (như gạch chéo `/`, dấu ngoặc đơn `()`, dấu ngoặc vuông `[]`, gạch ngang `-`, khoảng trắng, hoặc dấu hai chấm `:`) trong dấu nháy kép. Ví dụ: id["Label (Extra Info)"]
 2. Không sử dụng các thẻ HTML như <br> hoặc <br/> trong các nút hoặc nhãn. Sử dụng plain text hoặc \n cho xuống dòng trong dấu nháy kép.
 3. Giữ bố cục sơ đồ đơn giản, theo chiều dọc (flowchart TD) và sạch sẽ.
+4. Chỉ định nghĩa nhãn nút một lần duy nhất khi tạo nút (ví dụ: A["Nhãn nút"]). Khi tạo các liên kết sau đó, chỉ sử dụng ID của nút (ví dụ: A --> B), tuyệt đối không lặp lại nhãn nút bên trong liên kết (không viết A["Nhãn"] --> B["Nhãn"] vì sẽ gây lỗi biên dịch).
 
 QUAN TRỌNG VỀ ĐỊNH DẠNG LATEX:
 - Bạn PHẢI sử dụng định dạng LaTeX cho tất cả các công thức toán học, số liệu định lượng, chỉ số kỹ thuật, phương trình hoặc phép tính (ví dụ: công thức tính KPI, tỷ lệ phần trăm, độ trễ, băng thông, so sánh hiệu năng, hoặc độ phức tạp thuật toán).

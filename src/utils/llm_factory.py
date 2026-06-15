@@ -243,8 +243,25 @@ def parse_agent_json(content: str, fallback_key: str) -> dict:
             if idx != -1:
                 matches.append((idx, idx + len(marker), key))
                 
-    # Sort matches by start index
+    # Sort matches by start index (ascending) and length (descending) to prioritize longer markers
+    matches.sort(key=lambda x: (x[0], -(x[1] - x[0])))
+    
+    # Filter out overlapping matches
+    filtered_matches = []
+    for m in matches:
+        start, end, key = m
+        overlap = False
+        for accepted in filtered_matches:
+            astart, aend, _ = accepted
+            if not (end <= astart or start >= aend):
+                overlap = True
+                break
+        if not overlap:
+            filtered_matches.append(m)
+            
+    matches = filtered_matches
     matches.sort(key=lambda x: x[0])
+
     
     result = None
     
