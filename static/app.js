@@ -29,11 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const zoomResetBtn = document.getElementById('zoom-reset-btn');
     const zoomLevelEl = document.getElementById('zoom-level');
 
-    // Stop & Upload elements
+    // Stop element
     const stopBtn = document.getElementById('stop-btn');
-    const chatUploadBtn = document.getElementById('chat-upload-btn');
-    const chatFileInput = document.getElementById('chat-file-input');
-    const chatUploadStatusText = document.getElementById('chat-upload-status-text');
 
     const serverSettingsBtn = document.getElementById('server-settings-btn');
     const serverSettingsGroup = document.getElementById('server-settings-group');
@@ -133,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let currentZoom = 100;
-    let uploadedDiagramDataUrl = null;
+
 
     let eventSource   = null;
     let hasCompletedSuccessfully = false;
@@ -421,15 +418,6 @@ ${bodyContent}
     // ── 3. Diagram Download (PNG via Canvas) ──────────────────────────────────
     if (downloadDiagBtn) {
         downloadDiagBtn.addEventListener('click', async () => {
-            if (uploadedDiagramDataUrl) {
-                const a = document.createElement('a');
-                a.href = uploadedDiagramDataUrl;
-                a.download = `FPT_SoDo_QuyTrinh_${new Date().toISOString().slice(0,10)}.png`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                return;
-            }
 
             const svgEl = document.querySelector('#mermaid-render-output svg');
             if (!svgEl) {
@@ -760,7 +748,6 @@ ${bodyContent}
         printQueue = [];
         isPrinting = false;
 
-        uploadedDiagramDataUrl = null;
         if (renderTimeout) {
             clearTimeout(renderTimeout);
             renderTimeout = null;
@@ -771,16 +758,6 @@ ${bodyContent}
         }
         pendingReportContent = null;
         pendingExpContent = null;
-        if (chatUploadStatusText) {
-            chatUploadStatusText.textContent = '';
-            chatUploadStatusText.style.display = 'none';
-            chatUploadBtn.style.background = '';
-            chatUploadBtn.style.borderColor = '';
-            chatUploadBtn.style.color = '';
-        }
-        if (chatFileInput) {
-            chatFileInput.value = '';
-        }
 
         hasAnalystRun = false;
         document.querySelectorAll('.graph-node').forEach(n => {
@@ -1233,7 +1210,6 @@ ${bodyContent}
         }
 
         currentDiagramCode = code;
-        uploadedDiagramDataUrl = null;
 
         // If it doesn't have a ```mermaid block, check if it's a raw diagram
         if (!hasMermaidBlock) {
@@ -1875,13 +1851,18 @@ ${bodyContent}
                 return;
             }
 
-            // Case 3: SSE dropped mid-run — switch to polling instead of re-triggering pipeline
-            // CRITICAL FIX: Previously reconnecting via connectSse(sseCurrentUrl) would re-hit
-            // /api/run and start a DUPLICATE pipeline. Now we poll /api/report instead.
+            // Case 3: SSE dropped mid-run — STOP completely (no background polling)
             if (eventSource) { eventSource.close(); eventSource = null; }
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+            if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
 
-            console.warn('SSE dropped mid-run, switching to polling /api/report to avoid duplicate pipeline...');
-            startPollingForReport();
+            console.warn('SSE dropped mid-run, stopping completely...');
+            runBtn.disabled = false;
+            runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
+            if (stopBtn) stopBtn.style.display = 'none';
+            statStatus.textContent = 'Mất kết nối';
+            statStatus.style.color = '#ef4444';
+            localStorage.removeItem('fpt_active_search');
         };
     }
 
@@ -2166,7 +2147,6 @@ ${bodyContent}
 
     // ── Fetch & Render Final Report ───────────────────────────────────────────
     function fetchReport() {
-        uploadedDiagramDataUrl = null;
         fetch(getApiPrefix() + '/api/report?t=' + Date.now())
             .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
             .then(data => {
@@ -2231,114 +2211,30 @@ ${bodyContent}
                 clearInterval(timerInterval);
                 timerInterval = null;
             }
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+            if (window.activeFetchAbortController) {
+                window.activeFetchAbortController.abort();
+                window.activeFetchAbortController = null;
+            }
             
             // Restore buttons
             runBtn.disabled  = false;
             runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
             stopBtn.style.display = 'none';
             
-            statStatus.textContent = 'Đã tạm dừng';
+            statStatus.textContent = 'Đã dừng';
             statStatus.style.color = 'var(--text-muted)';
             
             const abortLog = document.createElement('div');
             abortLog.className = 'console-log';
             abortLog.style.color = 'var(--fpt-orange)';
-            abortLog.innerHTML = `<span style="font-weight:bold;">[Hệ Thống]</span> Tiến trình đã tạm dừng theo yêu cầu của người dùng. Bạn có thể tải lên tệp hoặc bắt đầu câu hỏi mới.`;
+            abortLog.innerHTML = `<span style="font-weight:bold;">[Hệ Thống]</span> Tiến trình đã dừng theo yêu cầu của người dùng.`;
             consoleOutput.appendChild(abortLog);
             consoleOutput.scrollTop = consoleOutput.scrollHeight;
             localStorage.removeItem('fpt_active_search');
-        });
-    }
-
-    // ── Chat File Upload Handler ──────────────────────────────────────────
-    if (chatUploadBtn && chatFileInput) {
-        chatUploadBtn.addEventListener('click', () => chatFileInput.click());
-        
-        chatFileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            const fileName = file.name;
-            const fileExt = fileName.split('.').pop().toLowerCase();
-            const isImage = file.type.startsWith('image/') || ['png', 'jpg', 'jpeg', 'svg'].includes(fileExt);
-            
-            if (isImage) {
-                // Limit image size to 2.5MB
-                if (file.size > 2.5 * 1024 * 1024) {
-                    alert('Tệp hình ảnh quá lớn! Giới hạn tối đa là 2.5MB.');
-                    chatFileInput.value = '';
-                    return;
-                }
-                
-                const reader = new FileReader();
-                reader.onload = (evt) => {
-                    uploadedDiagramDataUrl = evt.target.result;
-                    
-                    // Silent file upload (do not show attachment badge or filename)
-                    
-                    // Render custom image in diagram tab
-                    if (mermaidOutput) {
-                        currentZoom = 100;
-                        if (zoomLevelEl) zoomLevelEl.textContent = '100%';
-                        
-                        mermaidOutput.innerHTML = `
-                            <div style="width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 15px;">
-                                <div style="font-size: 11px; font-weight: 700; color: var(--fpt-blue); background: #eff6ff; padding: 6px 12px; border-radius: 4px; border: 1px solid #bfdbfe; display: inline-flex; align-items: center; gap: 6px;">
-                                    <i class="fa-solid fa-circle-info"></i> Sơ đồ do người dùng tải lên
-                                </div>
-                                <img src="${uploadedDiagramDataUrl}" style="max-width: 100%; max-height: 400px; border: 1px solid var(--panel-border); border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); object-fit: contain;">
-                            </div>
-                        `;
-                    }
-                    
-                    // Switch to diagram tab to show the upload
-                    const diagramTabBtn = document.getElementById('tab-btn-diagram');
-                    if (diagramTabBtn) diagramTabBtn.click();
-                    
-                    // Add system log entry
-                    const log = document.createElement('div');
-                    log.className = 'console-log';
-                    log.innerHTML = `<span style="color: var(--accent-recommender); font-weight: bold;">[Hệ Thống]</span> Đã nhận diện hình ảnh sơ đồ quy trình: <strong>${fileName}</strong>.`;
-                    consoleOutput.appendChild(log);
-                    consoleOutput.scrollTop = consoleOutput.scrollHeight;
-                };
-                reader.readAsDataURL(file);
-            } else if (['md', 'txt'].includes(fileExt)) {
-                const reader = new FileReader();
-                reader.onload = (evt) => {
-                    const content = evt.target.result;
-                    currentMarkdown = content;
-                    if (rawMarkdownText) rawMarkdownText.value = content;
-                    
-                    // Render detailed report
-                    if (reportView) {
-                        renderMarkdownReport(content);
-                    }
-                    
-                    // Silent file upload (do not show attachment badge or filename)
-                    
-                    // Switch to report tab
-                    const reportTabBtn = document.getElementById('tab-btn-report');
-                    if (reportTabBtn) reportTabBtn.click();
-                    
-                    // Try extracting and rendering Mermaid flowchart
-                    renderMermaidDiagram(content);
-                    
-                    // Enable download options
-                    if (downloadGroup) downloadGroup.style.display = 'flex';
-                    
-                    // Add system log entry
-                    const log = document.createElement('div');
-                    log.className = 'console-log';
-                    log.innerHTML = `<span style="color: var(--accent-recommender); font-weight: bold;">[Hệ Thống]</span> Đã tải lên tài liệu báo cáo: <strong>${fileName}</strong>.`;
-                    consoleOutput.appendChild(log);
-                    consoleOutput.scrollTop = consoleOutput.scrollHeight;
-                };
-                reader.readAsText(file);
-            } else {
-                alert('Định dạng tệp không được hỗ trợ! Vui lòng chọn tệp hình ảnh (.png, .jpg, .svg) hoặc văn bản (.md, .txt).');
-                chatFileInput.value = '';
-            }
         });
     }
 
@@ -2441,11 +2337,6 @@ ${bodyContent}
         printQueue = [];
         isPrinting = false;
 
-        uploadedDiagramDataUrl = null;
-        if (chatFileInput) {
-            chatFileInput.value = '';
-        }
-
         hasAnalystRun = false;
         runBtn.disabled  = false;
         runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
@@ -2460,102 +2351,8 @@ ${bodyContent}
         newChatBtn.addEventListener('click', startNewChat);
     }
 
-    // Check if there was an active search when reloading
-    const activeSearchStored = localStorage.getItem('fpt_active_search');
-    let hasRestoredActiveSearch = false;
-    
-    if (activeSearchStored) {
-        try {
-            const activeSearch = JSON.parse(activeSearchStored);
-            // Re-connect and resume if the search was running within the last 2 minutes
-            if (activeSearch && activeSearch.status === 'running' && (Date.now() - activeSearch.timestamp < 120000)) {
-                hasRestoredActiveSearch = true;
-                
-                if (topicInput) topicInput.value = activeSearch.topic;
-                
-                statTime.textContent = formatTimeString(activeSearch.stats.time);
-                statTokens.textContent = activeSearch.stats.tokens;
-                statAgents.textContent = activeSearch.stats.agents;
-                statStatus.textContent = 'Đang chạy…';
-                statStatus.style.color = 'var(--fpt-orange)';
-
-                if (consoleOutput) {
-                    consoleOutput.innerHTML = activeSearch.logs;
-                    consoleOutput.scrollTop = consoleOutput.scrollHeight;
-                }
-
-                hasAnalystRun = activeSearch.hasAnalystRun;
-
-                const agentKeys = ['guardrail', 'researcher', 'analyst', 'risk_assessor', 'recommender', 'reporter'];
-                agentKeys.forEach(k => {
-                    const badge = document.getElementById(`metrics-${k}`);
-                    if (badge && activeSearch.stats.agent_tokens) {
-                        const durVal = activeSearch.stats.agent_durations && activeSearch.stats.agent_durations[k] ? activeSearch.stats.agent_durations[k] : 0;
-                        const durText = `${durVal.toFixed(3)}s`;
-                        const tk = activeSearch.stats.agent_tokens[k] ? activeSearch.stats.agent_tokens[k].toLocaleString() : '0';
-                        const tps = activeSearch.stats.agent_toks_per_sec && activeSearch.stats.agent_toks_per_sec[k] ? activeSearch.stats.agent_toks_per_sec[k].toFixed(1) : '0.0';
-                        const mdl = activeSearch.stats.agent_models && activeSearch.stats.agent_models[k] ? activeSearch.stats.agent_models[k].split('/').pop() : '';
-                        badge.textContent = mdl ? `${mdl} · ${durText} · ${tps} tk/s · ${tk} tk` : `${durText} · ${tk} tk`;
-                        badge.title = (activeSearch.stats.agent_models && activeSearch.stats.agent_models[k]) || '';
-                    }
-                });
-
-                if (activeSearch.activeNode) {
-                    highlightNode(activeSearch.activeNode);
-                }
-
-                showUncreatedReportCard();
-                showUncreatedDiagramCard();
-
-                runBtn.disabled  = true;
-                runBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang chạy…';
-                if (stopBtn) stopBtn.style.display = 'block';
-                highlightPanel('running');
-
-                let elapsedMs = 0;
-                const timeText = activeSearch.stats.time || '';
-                if (timeText.endsWith('ms')) {
-                    elapsedMs = parseFloat(timeText) || 0;
-                } else {
-                    elapsedMs = (parseFloat(timeText) || 0) * 1000;
-                }
-                runStartTime = Date.now() - elapsedMs;
-                let lastSaveTime = Date.now();
-                timerInterval = setInterval(() => {
-                    const now = Date.now();
-                    statTime.textContent = `${((now - runStartTime) / 1000).toFixed(3)}s`;
-                    if (now - lastSaveTime >= 1000) {
-                        saveActiveSearchState('running');
-                        lastSaveTime = now;
-                    }
-                }, 50);
-
-                const reconnectLog = document.createElement('div');
-                reconnectLog.className = 'console-log';
-                reconnectLog.style.color = 'var(--fpt-orange)';
-                reconnectLog.innerHTML = `<br><span style="font-weight:bold;">[Hệ Thống]</span> Đang khôi phục tiến trình phân tích cho: <strong>${activeSearch.topic}</strong>...`;
-                consoleOutput.appendChild(reconnectLog);
-                consoleOutput.scrollTop = consoleOutput.scrollHeight;
-
-                hasCompletedSuccessfully = false;
-                sseErrorCount = 0;
-                sseReconnectCount = 0;
-                if (sseReconnectTimer) { clearTimeout(sseReconnectTimer); sseReconnectTimer = null; }
-                if (eventSource) {
-                    eventSource.close();
-                    eventSource = null;
-                }
-
-                // FIX: Instead of re-triggering /api/run (which would create a duplicate pipeline
-                // now blocked by concurrent protection), poll /api/report to wait for the existing
-                // pipeline to complete. The original run is likely still processing on the server.
-                console.warn('Restoring active search — switching to polling to avoid duplicate pipeline...');
-                startPollingForReport();
-            }
-        } catch (e) {
-            console.error('Error restoring active search:', e);
-        }
-    }
+    // Clear any stale active search state on reload (no background restore)
+    localStorage.removeItem('fpt_active_search');
 
     function initializeOrSyncWithServer() {
         fetch(getApiPrefix() + '/api/report?t=' + Date.now())
@@ -2594,7 +2391,5 @@ ${bodyContent}
     checkServerConnection();
     setInterval(checkServerConnection, 15000);
 
-    if (!hasRestoredActiveSearch) {
-        initializeOrSyncWithServer();
-    }
+    initializeOrSyncWithServer();
 });
