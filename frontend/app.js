@@ -639,21 +639,49 @@ document.addEventListener('DOMContentLoaded', () => {
     // ════════════════════════════════════════════════════════════════════════
     //  UNCREATED PLACEHOLDER CARDS & HISTORY HELPERS
     // ════════════════════════════════════════════════════════════════════════
+    // ── Metrics Grid: Irrelevant Card ────────────────────────────────────────
+    const _metricsGrid = document.querySelector('.metrics-grid');
+    let _metricsIrrelevantCard = null;
+
+    const showIrrelevantMetricsCard = () => {
+        if (!_metricsGrid) return;
+        if (!_metricsIrrelevantCard) {
+            _metricsIrrelevantCard = document.createElement('div');
+            _metricsIrrelevantCard.className = 'metrics-irrelevant-card';
+            _metricsIrrelevantCard.innerHTML = `
+                <div style="text-align: center; padding: 24px 16px;">
+                    <h1 style="font-size: 14px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 8px 0;">Chỉ Số Không Áp Dụng</h1>
+                    <p style="font-size: 11.5px; color: #475569; line-height: 1.7; max-width: 260px; margin: 0 auto;">
+                        Yêu cầu bị từ chối nên không tạo chỉ số quy trình.
+                    </p>
+                </div>
+            `;
+            _metricsGrid.parentNode.insertBefore(_metricsIrrelevantCard, _metricsGrid.nextSibling);
+        }
+        _metricsGrid.style.display = 'none';
+        _metricsIrrelevantCard.style.display = 'block';
+    };
+
+    const restoreMetricsGrid = () => {
+        if (_metricsGrid) _metricsGrid.style.display = '';
+        if (_metricsIrrelevantCard) _metricsIrrelevantCard.style.display = 'none';
+    };
+
     const showIrrelevantReportCard = (reason) => {
         reportView.className = 'markdown-report';
         reportView.style.border = '1px solid #fecaca';
         reportView.style.borderRadius = '8px';
         reportView.style.background = '#ffffff';
         reportView.style.padding = '30px 35px';
-        reportView.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02)';
+        reportView.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
         reportView.style.maxWidth = '100%';
         reportView.style.margin = '5px 0';
         const reasonText = (reason || 'Yêu cầu nằm ngoài phạm vi hỗ trợ của hệ thống.').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         reportView.innerHTML = `
             <div style="text-align: center; padding: 20px 0;">
-                <h1 style="font-size: 20px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 16px 0;">Không áp dụng</h1>
-                <p style="font-size: 14px; color: #0f172a; line-height: 1.7; max-width: 500px; margin: 0 auto;">
-                    ${reasonText}
+                <h1 style="font-size: 20px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 16px 0;">Báo Cáo Không Áp Dụng</h1>
+                <p style="font-size: 14px; color: #475569; line-height: 1.7; max-width: 500px; margin: 0 auto;">
+                    Yêu cầu bị từ chối nên không tạo báo cáo chi tiết.\n\n${reasonText}
                 </p>
             </div>
         `;
@@ -705,7 +733,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mermaidOutput.style.borderRadius = '8px';
         mermaidOutput.style.background = '#ffffff';
         mermaidOutput.style.padding = '30px 35px';
-        mermaidOutput.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02)';
+        mermaidOutput.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
         mermaidOutput.style.maxWidth = '100%';
         mermaidOutput.style.margin = '5px 0';
         mermaidOutput.style.minHeight = 'unset';
@@ -715,8 +743,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         mermaidOutput.innerHTML = `
             <div style="text-align: center; padding: 20px 0;">
-                <h1 style="font-size: 16px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 10px 0;">Sơ đồ không áp dụng</h1>
-                <p style="font-size: 13px; color: #0f172a; line-height: 1.6; max-width: 400px; margin: 0 auto;">
+                <h1 style="font-size: 16px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 10px 0;">Sơ Đồ Không Áp Dụng</h1>
+                <p style="font-size: 13px; color: #475569; line-height: 1.6; max-width: 400px; margin: 0 auto;">
                     Yêu cầu bị từ chối nên không tạo sơ đồ quy trình.
                 </p>
             </div>
@@ -822,6 +850,7 @@ document.addEventListener('DOMContentLoaded', () => {
     //  RESET UI
     // ════════════════════════════════════════════════════════════════════════
     function resetUI() {
+        restoreMetricsGrid();
         statTime.textContent   = '0.000s';
         statTokens.textContent = '0';
         statAgents.textContent = '0 / 6';
@@ -1473,9 +1502,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         clearInterval(pollingInterval);
                         hasCompletedSuccessfully = true;
                         if (isIrrelevantReport) {
-                            statStatus.textContent = 'Bị Từ Chối ❌';
-                            statStatus.style.color = '#ef4444';
-                            statAgents.textContent = '1 / 6';
+                            showIrrelevantMetricsCard();
                         } else {
                             statStatus.textContent = 'Hoàn Thành ✅';
                             statStatus.style.color = '#16a069';
@@ -1549,9 +1576,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 statTokens.textContent = data.stats.tokens;
 
                 if (data.stats.irrelevant) {
-                    statAgents.textContent = '1 / 6';
-                    statStatus.textContent = 'Bị Từ Chối ❌';
-                    statStatus.style.color = '#ef4444';
+                    showIrrelevantMetricsCard();
                 } else {
                     const agentCount = data.stats.agents || 6;
                     statAgents.textContent = `${agentCount} / ${agentCount === 3 ? 3 : 6}`;
@@ -2296,6 +2321,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 rejectionReason = reasonMatch[1].trim();
             }
             showIrrelevantReportCard(rejectionReason);
+            showIrrelevantMetricsCard();
         } else if (reportText.includes('Báo cáo chưa được tạo') || reportText.includes('Report not created') || reportText.includes('not generated yet')) {
             showUncreatedReportCard();
         } else if (reportText.trim().length === 0 || reportText.trim() === explanationText.trim()) {
@@ -2463,6 +2489,7 @@ document.addEventListener('DOMContentLoaded', () => {
             timerInterval = null;
         }
         topicInput.value = '';
+        restoreMetricsGrid();
         statTime.textContent   = '0.000s';
         statTokens.textContent = '0';
         statAgents.textContent = '0 / 6';
@@ -2558,7 +2585,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     !data.report.includes('Báo cáo chưa được tạo') && 
                     !data.report.includes('Report not created') && 
                     !data.report.includes('not generated yet') &&
-                    !data.report.includes('Request Rejected')) {
+                    !data.report.includes('Request Rejected') &&
+                    !data.report.trim().startsWith('# Không áp dụng') &&
+                    !data.report.trim().startsWith('# IRRELEVANT')) {
                     
                     let topic = 'Phân tích hệ thống';
                     const match = data.report.match(/^#\s+(.+)$/m);

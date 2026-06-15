@@ -239,6 +239,10 @@ async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: s
     # Acquire lock — will be released in the finally block of the background task
     await _pipeline_lock.acquire()
 
+    # Clear stale model tracking data from previous runs
+    from src.utils.llm_factory import _actual_model_used as _amu
+    _amu.clear()
+
     async def event_generator():
         initial_state = {
             "topic": topic,

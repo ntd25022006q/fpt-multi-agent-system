@@ -288,6 +288,15 @@ body {
 #stat-tokens { color: var(--accent-analyst); }
 #stat-agents { color: var(--accent-reporter); }
 
+/* ── Irrelevant Metrics Card ──────────────────────────── */
+.metrics-irrelevant-card {
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
 .token-breakdown { padding: 10px !important; }
 
 .token-row {

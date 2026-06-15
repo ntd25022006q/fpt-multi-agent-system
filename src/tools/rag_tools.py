@@ -212,44 +212,6 @@ def retrieve_hybrid(query: str, k: int = 5) -> list[Document]:
     bm25_results_with_scores = bm25.search(query, k=k)
     return [doc for doc, score in bm25_results_with_scores]
 
-def expand_query(topic: str) -> list[str]:
-    """Generate search variations using a lightweight model call to improve recall.
-    
-    Args:
-        topic: User research topic.
-        
-    Returns:
-        List of query variations.
-    """
-    try:
-        from src.utils.llm_factory import create_llm
-        from langchain_core.messages import SystemMessage, HumanMessage
-        
-        # Use the lightweight ministral-3:8b model for query expansion
-        llm = create_llm("ministral-3:8b", temperature=0.1, max_tokens=150)
-        prompt = (
-            "You are an information retrieval expert. Given a user's consulting query, "
-            "generate 2 additional search query variations (for a vector search system) "
-            "to retrieve the most relevant background documents. "
-            "Format the output as a simple list with one query per line. Do not write any other explanations or list numbering."
-        )
-        res = llm.invoke([
-            SystemMessage(content=prompt),
-            HumanMessage(content=f"Consulting Query: {topic}")
-        ])
-        queries = [topic]
-        for line in res.content.strip().split("\n"):
-            line_cleaned = re.sub(r'^\d+[\.\-]\s*', '', line.strip()).strip()
-            # Remove quotes if the LLM outputted them
-            if line_cleaned.startswith('"') and line_cleaned.endswith('"'):
-                line_cleaned = line_cleaned[1:-1].strip()
-            if line_cleaned:
-                queries.append(line_cleaned)
-        return list(set(queries))
-    except Exception as e:
-        console.print(f"[red]   ⚠️ Query expansion failed: {str(e)}. Using raw topic.")
-        return [topic]
-
 def get_rag_context(topic: str, query_type: str = "consulting") -> tuple[str, list[str]]:
     """Retrieve hybrid results, deduplicate context and extract citations.
     
