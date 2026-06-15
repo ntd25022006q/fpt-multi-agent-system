@@ -212,6 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const topic = topicInput?.value || 'Báo cáo chi tiết chiến lược';
             const safeTopic = topic.replace(/</g, '&lt;').replace(/>/g, '&gt;');
             const now = new Date();
+            const dateStr = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
             // Sao chép nội dung báo cáo, bỏ wrapper tràn bảng
             const tempDiv = document.createElement('div');
@@ -240,10 +241,32 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   .report-page { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
 
+  /* ── Colorful Header ── */
+  .export-header {
+    background: linear-gradient(135deg, #0054a6 0%, #1a6dc7 30%, #8b5cf6 60%, #e8621a 100%);
+    color: #fff; padding: 22px 28px; border-radius: 10px 10px 0 0;
+    display: flex; align-items: center; gap: 16px;
+    box-shadow: 0 4px 14px rgba(0,84,166,0.18);
+  }
+  .export-header .header-icon {
+    width: 44px; height: 44px; background: rgba(255,255,255,0.15);
+    border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .export-header .header-text h1 { font-size: 16px; font-weight: 700; margin-bottom: 3px; line-height: 1.3; }
+  .export-header .header-text .meta { font-size: 11px; opacity: 0.85; display: flex; gap: 14px; flex-wrap: wrap; }
+
+  /* ── Rainbow Accent Bar ── */
+  .rainbow-bar {
+    height: 4px;
+    background: linear-gradient(90deg, #e05577 0%, #2f88d4 20%, #8b5cf6 40%, #d97706 60%, #16a069 80%, #0d9488 100%);
+  }
+
+  /* ── Markdown Report ── */
   .markdown-report {
     line-height: 1.75; color: #1e293b; font-family: 'Inter', system-ui, -apple-system, sans-serif;
     padding: 40px 50px; background: #ffffff;
-    border: 1px solid #e2e8f0; border-radius: 8px;
+    border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
     margin: 0; max-width: 100%; width: 100%; overflow-x: hidden;
   }
@@ -274,11 +297,37 @@ document.addEventListener('DOMContentLoaded', () => {
   .markdown-report pre { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin: 16px 0; }
   .markdown-report pre code { padding: 0; background: transparent; border: none; font-size: 11px; color: #111827; }
   .markdown-report img { max-width: 100%; height: auto; display: block; margin: 16px auto; }
+
+  /* ── Colorful Footer ── */
+  .export-footer {
+    background: linear-gradient(135deg, #0d9488 0%, #2f88d4 50%, #0054a6 100%);
+    color: rgba(255,255,255,0.88); font-size: 11px; padding: 12px 28px;
+    border-radius: 0 0 10px 10px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+
+  @media print { .export-header, .export-footer { break-inside: avoid; } }
 </style>
 </head>
 <body>
 <div class="report-page">
+  <div class="export-header">
+    <div class="header-icon">\u{1F4CA}</div>
+    <div class="header-text">
+      <h1>${safeTopic}</h1>
+      <div class="meta">
+        <span>FPT Software</span>
+        <span>Multi-Agent AI System</span>
+        <span>${dateStr}</span>
+      </div>
+    </div>
+  </div>
+  <div class="rainbow-bar"></div>
   <div class="markdown-report">${tempDiv.innerHTML}</div>
+  <div class="export-footer">
+    <span>\u{1F6E1} FPT Software \u00A9 ${now.getFullYear()}</span>
+    <span>${dateStr}</span>
+  </div>
 </div>
 </body>
 </html>`;
