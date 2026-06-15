@@ -11,8 +11,6 @@ console = Console()
 from rich.panel import Panel
 from rich.text import Text
 
-console = Console()
-
 def print_header(title: str):
     """Print system startup header."""
     header_text = Text(title, style="bold cyan")
