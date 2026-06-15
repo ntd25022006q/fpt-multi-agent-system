@@ -667,7 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (_metricsIrrelevantCard) _metricsIrrelevantCard.style.display = 'none';
     };
 
-    const showIrrelevantReportCard = (reason) => {
+    const showIrrelevantReportCard = () => {
         reportView.className = 'markdown-report';
         reportView.style.border = '1px solid #fecaca';
         reportView.style.borderRadius = '8px';
@@ -676,12 +676,15 @@ document.addEventListener('DOMContentLoaded', () => {
         reportView.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
         reportView.style.maxWidth = '100%';
         reportView.style.margin = '5px 0';
-        const reasonText = (reason || 'Yêu cầu nằm ngoài phạm vi hỗ trợ của hệ thống.').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        reportView.style.minHeight = 'unset';
+        reportView.style.maxHeight = 'unset';
+        reportView.style.display = 'block';
+        reportView.style.position = 'relative';
         reportView.innerHTML = `
             <div style="text-align: center; padding: 20px 0;">
-                <h1 style="font-size: 20px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 16px 0;">Báo Cáo Không Áp Dụng</h1>
-                <p style="font-size: 14px; color: #475569; line-height: 1.7; max-width: 500px; margin: 0 auto;">
-                    Yêu cầu bị từ chối nên không tạo báo cáo chi tiết.\n\n${reasonText}
+                <h1 style="font-size: 16px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 10px 0;">Báo Cáo Không Áp Dụng</h1>
+                <p style="font-size: 13px; color: #475569; line-height: 1.6; max-width: 400px; margin: 0 auto;">
+                    Yêu cầu bị từ chối nên không tạo báo cáo chi tiết.
                 </p>
             </div>
         `;
@@ -2314,13 +2317,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         reportView.style.cssText = '';
         if (isIrrelevant) {
-            // Extract reason from the report text
-            let rejectionReason = 'Yêu cầu nằm ngoài phạm vi hỗ trợ của hệ thống.';
-            const reasonMatch = reportText.match(/\*\*Lý do từ chối:\*\*\s*(.+?)(?:\n|$)/);
-            if (reasonMatch && reasonMatch[1]) {
-                rejectionReason = reasonMatch[1].trim();
-            }
-            showIrrelevantReportCard(rejectionReason);
+            showIrrelevantReportCard();
             showIrrelevantMetricsCard();
         } else if (reportText.includes('Báo cáo chưa được tạo') || reportText.includes('Report not created') || reportText.includes('not generated yet')) {
             showUncreatedReportCard();
