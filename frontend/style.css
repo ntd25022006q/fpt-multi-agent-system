@@ -1004,6 +1004,14 @@ body {
     gap: 12px;
 }
 
+/* Ensure SVG diagrams are always centered inside the output container */
+.mermaid-diagram-output svg {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+}
+
 .mermaid-svg-wrapper {
     width: 100%;
     overflow: auto;

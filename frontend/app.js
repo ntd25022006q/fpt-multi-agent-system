@@ -450,6 +450,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     downloadDiagBtn.disabled = false;
                 };
 
+                // Calculate export canvas width — ensure SVG is centered with adequate padding
+                const MIN_EXPORT_W = 800;
+                const exportW = Math.max(w, MIN_EXPORT_W);
+                // Center SVG horizontally within the export canvas
+                const svgOffsetX = Math.round((exportW - w) / 2);
+
                 // Draw onto canvas with colorful header & footer
                 const img = new Image();
                 img.onload = () => {
@@ -457,23 +463,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         const canvas  = document.createElement('canvas');
                         const scale   = 2;
                         const totalH  = HEADER_H + h + FOOTER_H;
-                        canvas.width  = w * scale;
+                        canvas.width  = exportW * scale;
                         canvas.height = totalH * scale;
                         const ctx = canvas.getContext('2d');
                         if (!ctx) throw new Error("Could not get 2D context");
                         ctx.scale(scale, scale);
 
                         // ── Colorful header background ──
-                        const hdrGrad = ctx.createLinearGradient(0, 0, w, 0);
+                        const hdrGrad = ctx.createLinearGradient(0, 0, exportW, 0);
                         hdrGrad.addColorStop(0, '#0054a6');
                         hdrGrad.addColorStop(0.3, '#1a6dc7');
                         hdrGrad.addColorStop(0.6, '#8b5cf6');
                         hdrGrad.addColorStop(1, '#e8621a');
                         ctx.fillStyle = hdrGrad;
-                        ctx.fillRect(0, 0, w, HEADER_H);
+                        ctx.fillRect(0, 0, exportW, HEADER_H);
 
                         // Header accent bar (thin rainbow strip)
-                        const accentGrad = ctx.createLinearGradient(0, 0, w, 0);
+                        const accentGrad = ctx.createLinearGradient(0, 0, exportW, 0);
                         accentGrad.addColorStop(0, '#e05577');
                         accentGrad.addColorStop(0.2, '#2f88d4');
                         accentGrad.addColorStop(0.4, '#8b5cf6');
@@ -481,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         accentGrad.addColorStop(0.8, '#16a069');
                         accentGrad.addColorStop(1, '#0d9488');
                         ctx.fillStyle = accentGrad;
-                        ctx.fillRect(0, HEADER_H - 4, w, 4);
+                        ctx.fillRect(0, HEADER_H - 4, exportW, 4);
 
                         // Header text
                         ctx.fillStyle = '#ffffff';
@@ -492,28 +498,28 @@ document.addEventListener('DOMContentLoaded', () => {
                         ctx.font = '11px Inter, system-ui, sans-serif';
                         ctx.fillStyle = 'rgba(255,255,255,0.8)';
                         ctx.textAlign = 'right';
-                        ctx.fillText('FPT Software \u2022 Multi-Agent AI System', w - 18, HEADER_H / 2 - 2);
+                        ctx.fillText('FPT Software \u2022 Multi-Agent AI System', exportW - 18, HEADER_H / 2 - 2);
                         ctx.textAlign = 'left';
 
-                        // ── Diagram body ──
+                        // ── Diagram body (centered) ──
                         ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(0, HEADER_H, w, h);
-                        ctx.drawImage(img, 0, HEADER_H, w, h);
+                        ctx.fillRect(0, HEADER_H, exportW, h);
+                        ctx.drawImage(img, svgOffsetX, HEADER_H, w, h);
 
                         // ── Colorful footer ──
-                        const ftrGrad = ctx.createLinearGradient(0, 0, w, 0);
+                        const ftrGrad = ctx.createLinearGradient(0, 0, exportW, 0);
                         ftrGrad.addColorStop(0, '#0d9488');
                         ftrGrad.addColorStop(0.5, '#2f88d4');
                         ftrGrad.addColorStop(1, '#0054a6');
                         ctx.fillStyle = ftrGrad;
-                        ctx.fillRect(0, HEADER_H + h, w, FOOTER_H);
+                        ctx.fillRect(0, HEADER_H + h, exportW, FOOTER_H);
 
                         ctx.fillStyle = 'rgba(255,255,255,0.85)';
                         ctx.font = '10px Inter, system-ui, sans-serif';
                         ctx.textBaseline = 'middle';
                         ctx.fillText('\u{1F6E1}  FPT Software \u00A9 ' + now.getFullYear(), 18, HEADER_H + h + FOOTER_H / 2);
                         ctx.textAlign = 'right';
-                        ctx.fillText(dateStr, w - 18, HEADER_H + h + FOOTER_H / 2);
+                        ctx.fillText(dateStr, exportW - 18, HEADER_H + h + FOOTER_H / 2);
                         ctx.textAlign = 'left';
 
                         URL.revokeObjectURL(svgUrl);
@@ -777,6 +783,20 @@ document.addEventListener('DOMContentLoaded', () => {
     //  RESET UI
     // ════════════════════════════════════════════════════════════════════════
     function resetUI() {
+        // Stop any running SSE stream and timers from previous session
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
+
         statTime.textContent   = '0.000s';
         statTokens.textContent = '0';
         statAgents.textContent = '0 / 6';
@@ -785,34 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (downloadGroup) downloadGroup.style.display = 'none';
 
-        document.querySelectorAll('.graph-node').forEach(n => n.classList.remove('active'));
-        document.querySelectorAll('.graph-edges line').forEach(l => l.classList.remove('active'));
-
-        consoleOutput.innerHTML = '';
-        activeAgentBadge.textContent = 'Chờ';
-        activeAgentBadge.className   = 'agent-badge inactive';
-
-        showUncreatedReportCard();
-        showUncreatedDiagramCard();
-        if (rawMarkdownText) rawMarkdownText.value = 'Báo cáo chưa được tạo';
-        currentMarkdown = '';
-
-        printQueue = [];
-        isPrinting = false;
-
-        if (renderTimeout) {
-            clearTimeout(renderTimeout);
-            renderTimeout = null;
-        }
-        if (expRenderTimeout) {
-            clearTimeout(expRenderTimeout);
-            expRenderTimeout = null;
-        }
-        pendingReportContent = null;
-        pendingExpContent = null;
-        irrelevantDetected = false; // Reset guard flag for new runs
-
-        hasAnalystRun = false;
+        // Reset agent diagram nodes and edges completely
         document.querySelectorAll('.graph-node').forEach(n => {
             n.classList.remove('active');
             n.classList.remove('completed');
@@ -826,11 +819,67 @@ document.addEventListener('DOMContentLoaded', () => {
         if (directEdge) {
             directEdge.style.display = 'none';
         }
+
+        // Reset console output to clean "waiting" state
+        consoleOutput.innerHTML = '';
+        activeAgentBadge.textContent = 'Chờ lệnh';
+        activeAgentBadge.className   = 'agent-badge inactive';
+
+        // Reset report and diagram tabs
+        showUncreatedReportCard();
+        showUncreatedDiagramCard();
+        if (rawMarkdownText) rawMarkdownText.value = 'Báo cáo chưa được tạo';
+        currentMarkdown = '';
+        currentDiagramCode = '';
+
+        // Reset agent metrics badges
         const agentKeys = ['guardrail', 'researcher', 'analyst', 'risk_assessor', 'recommender', 'reporter'];
         agentKeys.forEach(k => {
             const badge = document.getElementById(`metrics-${k}`);
             if (badge) badge.textContent = '0.000s | 0 tk';
         });
+
+        // Reset typewriter queue
+        printQueue = [];
+        isPrinting = false;
+
+        // Reset pending render timeouts
+        if (renderTimeout) {
+            clearTimeout(renderTimeout);
+            renderTimeout = null;
+        }
+        if (expRenderTimeout) {
+            clearTimeout(expRenderTimeout);
+            expRenderTimeout = null;
+        }
+        pendingReportContent = null;
+        pendingExpContent = null;
+        irrelevantDetected = false; // Reset guard flag for new runs
+
+        hasAnalystRun = false;
+
+        // Reset active stream state
+        activeStream = {
+            node: null,
+            rawText: '',
+            thinkingText: '',
+            contentText: '',
+            section: 'none',
+            logHeaderEl: null,
+            thinkingDetailsEl: null,
+            thinkingContentEl: null,
+            logBodyEl: null
+        };
+
+        // Reset zoom
+        currentZoom = 100;
+        if (zoomLevelEl) zoomLevelEl.textContent = '100%';
+
+        // Reset mermaid explanation container
+        const expContainer = document.getElementById('mermaid-explanation-container');
+        const expContent = document.getElementById('mermaid-explanation-content');
+        if (expContainer) expContainer.style.display = 'none';
+        if (expContent) expContent.innerHTML = '';
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -1377,12 +1426,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderedSvg.style.display = 'block';
                 renderedSvg.style.margin = '0 auto';
                 renderedSvg.style.width = '100%';
+
+                // Extract native dimensions from viewBox for intelligent sizing
+                const viewBoxAttr = renderedSvg.getAttribute('viewBox');
+                if (viewBoxAttr) {
+                    const parts = viewBoxAttr.split(/[\s,]+/);
+                    if (parts.length === 4) {
+                        const nativeW = parseFloat(parts[2]) || 0;
+                        const nativeH = parseFloat(parts[3]) || 0;
+                        const containerW = mermaidOutput.clientWidth - 20; // account for padding
+                        // If SVG is narrower than container, use native width for crisp rendering
+                        if (nativeW > 0 && nativeW < containerW) {
+                            renderedSvg.style.width = nativeW + 'px';
+                        }
+                    }
+                }
             }
             // Ensure the container centers content
             mermaidOutput.style.display = 'flex';
             mermaidOutput.style.flexDirection = 'column';
             mermaidOutput.style.alignItems = 'center';
             mermaidOutput.style.justifyContent = 'center';
+            mermaidOutput.style.textAlign = 'center';
         } catch (err) {
             console.error('Mermaid error:', err);
             let displayErr = `Lỗi biên dịch sơ đồ: ${err.message}`;
