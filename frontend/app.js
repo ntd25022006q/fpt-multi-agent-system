@@ -254,16 +254,67 @@ ${bodyContent}
 </html>`;
     }
 
+    // ── 1. PDF Export (using html2pdf.js) ─────────────────────────────────────
     if (downloadPdfBtn) {
         downloadPdfBtn.addEventListener('click', () => {
-            if (!currentMarkdown || currentMarkdown.includes('not generated yet') || currentMarkdown.includes('Báo cáo chưa được tạo')) {
-                alert('Chưa có báo cáo. Vui lòng chạy quy trình trước!');
+            if (!currentMarkdown || currentMarkdown.includes('not generated yet') || currentMarkdown.includes('Báo cáo chưa được tạo') || currentMarkdown.includes('IRRELEVANT') || currentMarkdown.includes('Không áp dụng')) {
+                alert('Chưa có báo cáo hợp lệ. Yêu cầu bị từ chối hoặc chưa chạy quy trình!');
                 return;
             }
 
             const origHTML = downloadPdfBtn.innerHTML;
-            downloadPdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xuất báo cáo…';
+            downloadPdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xuất PDF…';
             downloadPdfBtn.disabled = true;
+
+            try {
+                const printHtml = buildPrintHTML(reportView.innerHTML, topicInput?.value || '');
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = printHtml;
+                tempDiv.style.position = 'absolute';
+                tempDiv.style.left = '-9999px';
+                tempDiv.style.top = '0';
+                document.body.appendChild(tempDiv);
+
+                const opt = {
+                    margin: [10, 12, 14, 12],
+                    filename: `BaoCao_ChiTiet_FPT_${new Date().toISOString().slice(0,10)}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                };
+
+                html2pdf().set(opt).from(tempDiv).save().then(() => {
+                    document.body.removeChild(tempDiv);
+                    downloadPdfBtn.innerHTML = origHTML;
+                    downloadPdfBtn.disabled = false;
+                }).catch(err => {
+                    document.body.removeChild(tempDiv);
+                    console.error('PDF export error:', err);
+                    alert(`Lỗi tạo PDF: ${err.message}`);
+                    downloadPdfBtn.innerHTML = origHTML;
+                    downloadPdfBtn.disabled = false;
+                });
+            } catch (err) {
+                console.error('PDF export error:', err);
+                alert(`Lỗi tạo PDF: ${err.message}`);
+                downloadPdfBtn.innerHTML = origHTML;
+                downloadPdfBtn.disabled = false;
+            }
+        });
+    }
+
+    // ── 2. Word (DOCX) Export ─────────────────────────────────────────────────
+    if (downloadDocxBtn) {
+        downloadDocxBtn.addEventListener('click', () => {
+            if (!currentMarkdown || currentMarkdown.includes('not generated yet') || currentMarkdown.includes('Báo cáo chưa được tạo') || currentMarkdown.includes('IRRELEVANT') || currentMarkdown.includes('Không áp dụng')) {
+                alert('Chưa có báo cáo hợp lệ. Yêu cầu bị từ chối hoặc chưa chạy quy trình!');
+                return;
+            }
+
+            const origHTML = downloadDocxBtn.innerHTML;
+            downloadDocxBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xuất Word…';
+            downloadDocxBtn.disabled = true;
 
             try {
                 // Get the report content
@@ -282,7 +333,7 @@ ${bodyContent}
                                 font-size: 12pt;
                                 line-height: 1.5;
                                 color: #000000;
-                                margin: 0; /* Let Word's default page margins apply, no double margin narrowing */
+                                margin: 0;
                                 padding: 0;
                                 width: 100%;
                             }
@@ -304,12 +355,8 @@ ${bodyContent}
                                 border-bottom: 1px solid #000000;
                                 padding-bottom: 3px;
                             }
-                            h3 {
-                                font-size: 12pt;
-                            }
-                            h4 {
-                                font-size: 11pt;
-                            }
+                            h3 { font-size: 12pt; }
+                            h4 { font-size: 11pt; }
                             p {
                                 font-size: 12pt;
                                 margin-top: 0;
@@ -342,10 +389,7 @@ ${bodyContent}
                                 margin-bottom: 10pt;
                                 padding-left: 20pt;
                             }
-                            li {
-                                font-size: 12pt;
-                                margin-bottom: 4pt;
-                            }
+                            li { font-size: 12pt; margin-bottom: 4pt; }
                             blockquote {
                                 margin: 10pt 0;
                                 padding-left: 15pt;
@@ -378,13 +422,13 @@ ${bodyContent}
                     URL.revokeObjectURL(url);
                 }, 100);
 
-                downloadPdfBtn.innerHTML = origHTML;
-                downloadPdfBtn.disabled = false;
+                downloadDocxBtn.innerHTML = origHTML;
+                downloadDocxBtn.disabled = false;
             } catch (err) {
                 console.error('Docx export error:', err);
                 alert(`Lỗi tạo Word: ${err.message}`);
-                downloadPdfBtn.innerHTML = origHTML;
-                downloadPdfBtn.disabled = false;
+                downloadDocxBtn.innerHTML = origHTML;
+                downloadDocxBtn.disabled = false;
             }
         });
     }
@@ -574,6 +618,42 @@ ${bodyContent}
     // ════════════════════════════════════════════════════════════════════════
     //  UNCREATED PLACEHOLDER CARDS & HISTORY HELPERS
     // ════════════════════════════════════════════════════════════════════════
+    const showIrrelevantReportCard = (reason) => {
+        reportView.className = 'markdown-report';
+        reportView.style.border = '1px solid #fecaca';
+        reportView.style.borderRadius = '8px';
+        reportView.style.background = '#ffffff';
+        reportView.style.padding = '30px 35px';
+        reportView.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02)';
+        reportView.style.maxWidth = '100%';
+        reportView.style.margin = '5px 0';
+        const reasonText = reason || 'Yêu cầu nằm ngoài phạm vi hỗ trợ của hệ thống.';
+        reportView.innerHTML = `
+            <div style="text-align: center; padding: 20px 0;">
+                <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+                    <i class="fa-solid fa-shield-halved" style="font-size: 28px; color: #dc2626;"></i>
+                </div>
+                <h1 style="font-size: 20px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px 0;">Không áp dụng (IRRELEVANT)</h1>
+                <p style="font-size: 14px; color: #64748b; line-height: 1.7; max-width: 500px; margin: 0 auto 20px auto;">
+                    Yêu cầu của bạn đã bị <strong style="color: #dc2626;">từ chối</strong> vì nằm ngoài phạm vi hỗ trợ của hệ thống Multi-Agent FPT Software.
+                </p>
+                <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; text-align: left; max-width: 520px; margin: 0 auto 16px auto;">
+                    <p style="font-size: 12px; font-weight: 700; color: #991b1b; margin: 0 0 6px 0;"><i class="fa-solid fa-circle-exclamation" style="margin-right: 4px;"></i> Lý do từ chối:</p>
+                    <p style="font-size: 13px; color: #7f1d1d; margin: 0; line-height: 1.6;">${reasonText}</p>
+                </div>
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; text-align: left; max-width: 520px; margin: 0 auto;">
+                    <p style="font-size: 12px; font-weight: 700; color: #334155; margin: 0 0 8px 0;"><i class="fa-solid fa-circle-info" style="margin-right: 4px;"></i> Phạm vi hỗ trợ:</p>
+                    <ul style="font-size: 12px; color: #475569; margin: 0; padding-left: 18px; line-height: 1.8;">
+                        <li>Kiến trúc phần mềm & kỹ thuật (microservices, cloud, database)</li>
+                        <li>Chiến lược công nghệ doanh nghiệp, chuyển đổi số</li>
+                        <li>Thông tin FPT Software: dự án, phòng lab, tài chính, sáng kiến</li>
+                        <li>Tư vấn kỹ thuật hoặc câu hỏi về kỹ thuật phần mềm</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+    };
+
     const showUncreatedReportCard = () => {
         reportView.className = 'markdown-report';
         reportView.style.border = '1px solid #e2e8f0';
@@ -604,6 +684,38 @@ ${bodyContent}
                 <p style="margin: 0 auto; font-size: 13px; max-width: 420px; line-height: 1.6; color: var(--text-secondary);">
                     Yêu cầu của bạn tập trung vào việc mô tả hoặc vẽ sơ đồ quy trình. 
                     Vui lòng chuyển sang tab <strong>Sơ Đồ Quy Trình</strong> ở bên trên để xem trực quan sơ đồ động và bản phân tích kiến trúc chi tiết.
+                </p>
+            </div>
+        `;
+    };
+
+    const showIrrelevantDiagramCard = () => {
+        const toolbar = document.querySelector('.diagram-toolbar');
+        if (toolbar) toolbar.style.display = 'none';
+        const exp = document.getElementById('mermaid-explanation-container');
+        if (exp) exp.style.display = 'none';
+
+        mermaidOutput.className = 'markdown-report';
+        mermaidOutput.style.border = '1px solid #fecaca';
+        mermaidOutput.style.borderRadius = '8px';
+        mermaidOutput.style.background = '#ffffff';
+        mermaidOutput.style.padding = '30px 35px';
+        mermaidOutput.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02)';
+        mermaidOutput.style.maxWidth = '100%';
+        mermaidOutput.style.margin = '5px 0';
+        mermaidOutput.style.minHeight = 'unset';
+        mermaidOutput.style.maxHeight = 'unset';
+        mermaidOutput.style.display = 'block';
+        mermaidOutput.style.position = 'relative';
+
+        mermaidOutput.innerHTML = `
+            <div style="text-align: center; padding: 20px 0;">
+                <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px auto;">
+                    <i class="fa-solid fa-diagram-project" style="font-size: 24px; color: #dc2626;"></i>
+                </div>
+                <h1 style="font-size: 16px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 8px 0;">Sơ đồ không áp dụng (IRRELEVANT)</h1>
+                <p style="font-size: 13px; color: #64748b; line-height: 1.6; max-width: 400px; margin: 0 auto;">
+                    Yêu cầu bị từ chối nên không tạo sơ đồ quy trình.
                 </p>
             </div>
         `;
@@ -1315,11 +1427,18 @@ ${bodyContent}
             fetch(getApiPrefix() + '/api/report?t=' + Date.now())
                 .then(res => { if (!res.ok) throw new Error(); return res.json(); })
                 .then(data => {
-                    if (data.report && !data.report.includes('Báo cáo chưa được tạo') && data.report.trim().length > 100) {
+                    const isIrrelevantReport = data.report && (data.report.includes('IRRELEVANT') || data.report.includes('Không áp dụng'));
+                    if (data.report && (isIrrelevantReport || (!data.report.includes('Báo cáo chưa được tạo') && data.report.trim().length > 100))) {
                         clearInterval(pollingInterval);
                         hasCompletedSuccessfully = true;
-                        statStatus.textContent = 'Hoàn Thành ✅';
-                        statStatus.style.color = '#16a069';
+                        if (isIrrelevantReport) {
+                            statStatus.textContent = 'Bị Từ Chối ❌';
+                            statStatus.style.color = '#ef4444';
+                            statAgents.textContent = '1 / 6';
+                        } else {
+                            statStatus.textContent = 'Hoàn Thành ✅';
+                            statStatus.style.color = '#16a069';
+                        }
                         runBtn.disabled = false;
                         runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
                         if (stopBtn) stopBtn.style.display = 'none';
@@ -2111,8 +2230,19 @@ ${bodyContent}
         currentMarkdown = reportText;
         if (rawMarkdownText) rawMarkdownText.value = reportText;
         
+        // Check if this is an irrelevant/rejected report
+        const isIrrelevant = reportText.includes('IRRELEVANT') || reportText.includes('Không áp dụng') || reportText.includes('bị từ chối');
+
         reportView.style.cssText = '';
-        if (reportText.includes('Báo cáo chưa được tạo') || reportText.includes('Report not created') || reportText.includes('not generated yet')) {
+        if (isIrrelevant) {
+            // Extract reason from the report text
+            let rejectionReason = 'Yêu cầu nằm ngoài phạm vi hỗ trợ của hệ thống.';
+            const reasonMatch = reportText.match(/\*\*Lý do từ chối:\*\*\s*(.+?)(?:\n|$)/);
+            if (reasonMatch && reasonMatch[1]) {
+                rejectionReason = reasonMatch[1].trim();
+            }
+            showIrrelevantReportCard(rejectionReason);
+        } else if (reportText.includes('Báo cáo chưa được tạo') || reportText.includes('Report not created') || reportText.includes('not generated yet')) {
             showUncreatedReportCard();
         } else if (reportText.trim().length === 0 || reportText.trim() === explanationText.trim()) {
             showDiagramOnlyReportCard();
@@ -2122,7 +2252,9 @@ ${bodyContent}
 
         
         try {
-            if (diagramText) {
+            if (isIrrelevant) {
+                showIrrelevantDiagramCard();
+            } else if (diagramText) {
                 renderMermaidDiagram(diagramText);
             } else {
                 renderMermaidDiagram(reportText);
@@ -2141,7 +2273,8 @@ ${bodyContent}
             expContainer.style.display = 'none';
         }
 
-        if (!reportText.includes('Request Rejected') &&
+        if (!isIrrelevant &&
+            !reportText.includes('Request Rejected') &&
             !reportText.includes('not generated yet') &&
             !reportText.includes('Báo cáo chưa được tạo') &&
             !reportText.includes('Report not created')) {
