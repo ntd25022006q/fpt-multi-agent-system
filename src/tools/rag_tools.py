@@ -3,12 +3,10 @@ import math
 import re
 from langchain_core.documents import Document
 from rich.console import Console
-from config import RAW_DATA_DIR, CHROMA_DB_DIR, WORKSPACE_DIR
+from config import RAW_DATA_DIR
 
 console = Console()
 
-_embeddings = None
-_vectorstore = None
 _all_docs = None
 
 class CustomBM25:

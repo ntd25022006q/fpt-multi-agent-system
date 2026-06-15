@@ -10,14 +10,15 @@ import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.responses import StreamingResponse, FileResponse, Response, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from src.graph import app as graph_app
 from src.utils.cleaner import clean_internal_filenames
-from config import WORKSPACE_DIR, OUTPUT_DIR, RUNNING_DIR
+from config import WORKSPACE_DIR, OUTPUT_DIR
 
 # ── Encoding ──────────────────────────────────────────────────────────────────
 for _s in (sys.stdout, sys.stderr):
@@ -32,15 +33,15 @@ _pipeline_lock = asyncio.Lock()
 async def lifespan(app_instance):
     # Startup: pre-initialize RAG cached documents in memory
     from src.tools.rag_tools import get_all_docs
-    print("⌛ Pre-initializing RAG documents in memory...")
+    print("Pre-initializing RAG documents in memory...")
     try:
         await asyncio.to_thread(get_all_docs)
-        print("✅ RAG documents cached in memory and ready!")
+        print("RAG documents cached in memory and ready!")
     except Exception as e:
-        print(f"⚠️ Failed to pre-initialize RAG documents: {e}")
+        print(f"Failed to pre-initialize RAG documents: {e}")
     yield
     # Shutdown: cleanup if needed
-    print("🛑 Shutting down...")
+    print("Shutting down...")
 
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -74,14 +75,12 @@ app.mount("/lib", StaticFiles(directory=str(FRONTEND_DIR / "lib")), name="lib")
 app.mount("/webfonts", StaticFiles(directory=str(FRONTEND_DIR / "webfonts")), name="webfonts")
 
 
-# ── Bypass header helper ──────────────────────────────────────────────────────
+# ── Bypass header helper (only tunnel/CDN bypass headers, no encoding) ───────
 BYPASS_HEADERS = {
     "Bypass-Tunnel-Reminder": "true",
     "ngrok-skip-browser-warning": "true",
     "X-Accel-Buffering": "no",
     "Cache-Control": "no-cache, no-transform",
-    "Connection": "keep-alive",
-    "Content-Encoding": "identity",
 }
 
 
@@ -223,9 +222,21 @@ def download_markdown():
     return {"error": "Report not generated yet — run the pipeline first."}
 
 
-@app.get("/api/run")
-async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: str = ""):
-    """LangGraph multi-agent pipeline via Server-Sent Events."""
+# ── POST request body for /api/run (secure: API keys not exposed in URL/logs) ─
+class RunRequest(BaseModel):
+    topic: str
+    ollama_api_key: str = ""
+    openrouter_api_key: str = ""
+
+
+@app.post("/api/run")
+async def run_agents(request: RunRequest):
+    """LangGraph multi-agent pipeline via Server-Sent Events.
+    Uses POST to prevent API key exposure in URL query parameters and server logs."""
+    topic = request.topic
+    ollama_api_key = request.ollama_api_key
+    openrouter_api_key = request.openrouter_api_key
+
     # Xác thực đầu vào
     if not topic or not topic.strip():
         return {"error": "Chủ đề không được để trống."}
@@ -240,8 +251,8 @@ async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: s
     await _pipeline_lock.acquire()
 
     # Clear stale model tracking data from previous runs
-    from src.utils.llm_factory import _actual_model_used as _amu
-    _amu.clear()
+    from src.utils.llm_factory import clear_actual_models
+    clear_actual_models()
 
     async def event_generator():
         initial_state = {

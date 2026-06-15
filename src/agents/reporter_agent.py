@@ -354,15 +354,6 @@ async def reporter_node(state: ResearchState, config: RunnableConfig = None) -> 
     mermaid_diagram = parsed.get("mermaid_diagram", "")
     diagram_explanation = parsed.get("diagram_explanation", "")
     
-    # Programmatically append clean local links for each citation (hidden as requested)
-    # citations = state.get("citations", [])
-    # if citations:
-    #     citations_md = "\n\n## 6. Sources & Reference Documents\n" if query_type == "consulting" else "\n\n## 4. Sources & Reference Documents\n"
-    #     for cit in citations:
-    #         citations_md += f"*   [{cit}](file:///c:/Users/tswat/Downloads/multi%20agent/data/raw/{cit})\n"
-    #     report = report + citations_md
-
-        
     # Write the diagram and diagram explanation directly to disk
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     if mermaid_diagram:

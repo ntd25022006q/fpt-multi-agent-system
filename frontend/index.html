@@ -19,7 +19,6 @@
     <!-- KaTeX for LaTeX rendering -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" crossorigin="anonymous">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/contrib/auto-render.min.js" crossorigin="anonymous"></script>
     <!-- Mermaid Diagram Library -->
     <script src="lib/mermaid.min.js"></script>
 
@@ -38,7 +37,7 @@
                 'fontSize': '13px',
                 'fontFamily': 'Inter, sans-serif'
             },
-            securityLevel: 'loose',
+            securityLevel: 'strict',
             flowchart: { useMaxWidth: true, htmlLabels: false }
         });
     </script>
@@ -190,9 +189,9 @@
 
                         <!-- Nodes -->
                         <div class="nodes-container">
-                            <div class="graph-node" id="node-guardrail" data-agent="Lọ́c Ngữ Cảnh">
+                            <div class="graph-node" id="node-guardrail" data-agent="Lọc Ngữ Cảnh">
                                 <div class="node-icon"><i class="fa-solid fa-filter"></i></div>
-                                <span class="node-label">Lọ́c Ngữ Cảnh</span>
+                                <span class="node-label">Lọc Ngữ Cảnh</span>
                                 <span class="node-metrics-badge" id="metrics-guardrail">0.000s | 0 tk</span>
                             </div>
                             <div class="graph-node" id="node-researcher" data-agent="Nghiên Cứu">
@@ -312,13 +311,7 @@
         </main>
     </div>
 
-    <!-- Zoom Modal -->
-    <div id="image-zoom-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.9); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
-        <button id="close-zoom-modal" style="position: absolute; top: 20px; right: 20px; background: rgba(255, 255, 255, 0.2); border: none; color: white; border-radius: 50%; width: 40px; height: 40px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">&times;</button>
-        <img id="zoomed-image-el" src="" style="max-width: 90%; max-height: 90%; object-fit: contain; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border-radius: 8px;">
-    </div>
-
     <!-- App Script -->
-    <script src="app.js?v=49"></script>
+    <script src="app.js?v=50"></script>
 </body>
 </html>

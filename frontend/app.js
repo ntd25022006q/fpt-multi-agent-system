@@ -33,8 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const stopBtn = document.getElementById('stop-btn');
 
     // Settings panel removed — API prefix auto-detected, no manual config needed
-    const ollamaKeyInput = null;
-    const openrouterKeyInput = null;
 
     function getApiPrefix() {
         // Auto-detect: use current origin for local, or Render URL for production
@@ -1554,11 +1552,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (cleanErr.includes('429') && (cleanErr.includes('limit') || cleanErr.includes('ollama'))) {
                 logDiv.innerHTML = `<span style="font-weight:bold;">[Lỗi Hệ Thống]</span> Bạn đã đạt giới hạn sử dụng hàng tuần của Ollama Cloud (Lỗi 429).<br><br>
-                <strong>Cách khắc phục lỗi 429 cực đơn giản và hoàn toàn miễn phí:</strong><br>
-                1. Đăng ký tài khoản và lấy một API Key miễn phí tại <a href="https://openrouter.ai" target="_blank" style="color: #60a5fa; text-decoration: underline; font-weight: bold;">OpenRouter.ai</a> (chỉ mất 30 giây, không cần thẻ tín dụng).<br>
-                2. Nhấn biểu tượng <strong>Cài đặt (hình bánh răng ⚙️)</strong> ở góc trên bên trái màn hình.<br>
-                3. Nhập API Key vừa lấy vào mục <strong>Khóa API OpenRouter</strong> để tiếp tục sử dụng hệ thống.<br><br>
-                <em>Hoặc nhập Khóa API Ollama Cloud mới của bạn vào ô tương ứng.</em>`;
+                <strong>Cách khắc phục:</strong> Giới hạn sẽ được đặt lại vào thứ Hai hàng tuần. Bạn có thể thử lại sau hoặc sử dụng API Key từ nhà cung cấp khác.<br><br>
+                <em>Lưu ý: Hệ thống đã tích hợp cơ chế dự phòng tự động (Fast Fallback) — khi mô hình chính gặp giới hạn, hệ thống sẽ tự chuyển sang mô hình dự phòng khả dụng.</em>`;
             } else {
                 const safeErr = cleanErr.replace(/</g,'&lt;').replace(/>/g,'&gt;');
                 logDiv.innerHTML = `<span style="font-weight:bold;">[Lỗi Hệ Thống]</span> Tiến trình gặp sự cố: <strong>${safeErr}</strong>. Vui lòng kiểm tra lại cấu hình hoặc API Key.`;
@@ -2043,7 +2038,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
             if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
 
-            console.warn('SSE dropped mid-run, stopping completely...');
             runBtn.disabled = false;
             runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
             if (stopBtn) stopBtn.style.display = 'none';
@@ -2053,14 +2047,96 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    // ── SSE via POST (secure: API keys in request body, not URL) ────────────────
+    async function connectSsePost(url, body) {
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
+        if (sseReconnectTimer) {
+            clearTimeout(sseReconnectTimer);
+            sseReconnectTimer = null;
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                let errMsg = `Lỗi máy chủ: ${response.status}`;
+                try {
+                    const errJson = JSON.parse(errText);
+                    if (errJson.error) errMsg = errJson.error;
+                } catch (e) {}
+                handleSseMessage({ error: errMsg });
+                return;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // Keep incomplete line in buffer
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const dataStr = line.slice(6).trim();
+                        if (!dataStr) continue;
+                        try {
+                            const data = JSON.parse(dataStr);
+                            handleSseMessage(data);
+                        } catch (e) {
+                            // Non-JSON data, ignore
+                        }
+                    }
+                    // Skip SSE comments (": ping" etc.) and empty lines
+                }
+            }
+
+            // Process any remaining buffer
+            if (buffer.startsWith('data: ')) {
+                const dataStr = buffer.slice(6).trim();
+                if (dataStr) {
+                    try {
+                        const data = JSON.parse(dataStr);
+                        handleSseMessage(data);
+                    } catch (e) {}
+                }
+            }
+        } catch (err) {
+            if (hasCompletedSuccessfully) return;
+
+            const statusText = statStatus.textContent || '';
+            if (statusText.includes('Hoàn Thành') || statusText.includes('Bị Từ Chối') ||
+                statusText.includes('Đã tạm dừng') || statusText.includes('Thất Bại')) {
+                return;
+            }
+
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+            if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
+
+            runBtn.disabled = false;
+            runBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích Hoạt Phân Tích';
+            if (stopBtn) stopBtn.style.display = 'none';
+            statStatus.textContent = 'Mất kết nối';
+            statStatus.style.color = '#ef4444';
+            localStorage.removeItem('fpt_active_search');
+        }
+    }
+
     runBtn.addEventListener('click', () => {
         const topic = topicInput.value.trim();
         if (!topic) { alert('Vui lòng nhập câu hỏi hoặc chủ đề nghiên cứu trước khi kích hoạt!'); return; }
-
-        if (window.activeFetchAbortController) {
-            window.activeFetchAbortController.abort();
-            window.activeFetchAbortController = null;
-        }
 
         resetUI();
         hasCompletedSuccessfully = false;
@@ -2088,13 +2164,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, 50);
 
-        const ollamaKey = ollamaKeyInput ? ollamaKeyInput.value.trim() : '';
-        const openrouterKey = openrouterKeyInput ? openrouterKeyInput.value.trim() : '';
-        let url = getApiPrefix() + `/api/run?topic=${encodeURIComponent(topic)}`;
-        if (ollamaKey) url += `&ollama_api_key=${encodeURIComponent(ollamaKey)}`;
-        if (openrouterKey) url += `&openrouter_api_key=${encodeURIComponent(openrouterKey)}`;
-
-        connectSse(url);
+        // Use POST to avoid exposing API keys in URL query parameters
+        const postUrl = getApiPrefix() + '/api/run';
+        const body = { topic: topic };
+        connectSsePost(postUrl, body);
     });
 
 
@@ -2439,10 +2512,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 clearInterval(pollingInterval);
                 pollingInterval = null;
             }
-            if (window.activeFetchAbortController) {
-                window.activeFetchAbortController.abort();
-                window.activeFetchAbortController = null;
-            }
 
             // Restore buttons
             runBtn.disabled  = false;
@@ -2515,6 +2584,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.graph-node').forEach(n => {
             n.classList.remove('active');
+            n.classList.remove('completed');
             n.classList.remove('node-hidden');
         });
         document.querySelectorAll('.graph-edges line').forEach(l => {
@@ -2600,6 +2670,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (consoleOutput && hideAnalysisLogText) {
         consoleOutput.classList.add('hide-analysis-suffix');
+    }
+
+    // Configure marked.js for proper GFM rendering
+    if (typeof marked !== 'undefined') {
+        marked.setOptions({ gfm: true, breaks: false });
     }
 
     // Check server connection on load and every 15 seconds

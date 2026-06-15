@@ -1,9 +1,13 @@
 import os
-from langchain_openai import ChatOpenAI
-from config import OLLAMA_API_KEY, OLLAMA_BASE_URL
-
+import time
+import json
+import re
+import threading
+import urllib.request
 import asyncio
+from langchain_openai import ChatOpenAI
 from langchain_core.callbacks import AsyncCallbackHandler
+from config import OLLAMA_API_KEY, OLLAMA_BASE_URL
 
 # Thread-local or simple dict to track the actual model used per node during a run
 _actual_model_used: dict = {}
@@ -29,11 +33,6 @@ class QueueCallbackHandler(AsyncCallbackHandler):
             "node": self.node_name,
             "token": token
         })
-import time
-import urllib.request
-import json
-import threading
-
 # Dynamic model health & latency cache
 _model_latencies: dict = {}
 _latency_checker_started = False
@@ -98,7 +97,9 @@ def start_latency_checker():
     t = threading.Thread(target=worker, daemon=True)
     t.start()
 
-# Headroom compression removed — no longer needed
+def clear_actual_models():
+    """Clear the model tracking data from previous runs."""
+    _actual_model_used.clear()
 
 
 def create_llm(model: str, temperature: float = 0.2, max_tokens: int = 2000, streaming: bool = False, config = None):
@@ -206,9 +207,6 @@ def get_actual_model_used(node_name: str, default_model: str) -> str:
     """Return the actual model name recorded for a node (set by QueueCallbackHandler)."""
     return _actual_model_used.get(node_name, default_model)
 
-
-import json
-import re
 
 def parse_agent_json(content: str, fallback_key: str) -> dict:
     """Parse output from agents using a robust delimiter-based check, extracting thinking logs,

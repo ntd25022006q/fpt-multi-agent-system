@@ -8,7 +8,6 @@ for _s in (sys.stdout, sys.stderr):
 
 from rich.console import Console
 console = Console()
-from rich.panel import Panel
 from rich.text import Text
 
 def print_header(title: str):
@@ -23,13 +22,6 @@ def print_header(title: str):
 def print_separator():
     """Print standard section separator."""
     console.print(Text("━" * 70, style="dim white"))
-    console.print()
-
-def print_issue(issue_desc: str):
-    """Print input issue details."""
-    issue_text = Text("📋 Issue: ", style="bold yellow")
-    issue_text.append(issue_desc, style="yellow")
-    console.print(issue_text)
     console.print()
 
 def print_agent_start(agent_name: str, action: str):

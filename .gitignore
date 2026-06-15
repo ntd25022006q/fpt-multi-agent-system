@@ -37,9 +37,6 @@ Thumbs.db
 # Vercel
 .vercel/
 
-# Headroom
-.headroom/
-
 # Duplicate static directory (now served from frontend/ only)
 static/
 

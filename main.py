@@ -57,8 +57,8 @@ def run_pipeline(topic: str):
         for msg in final_state.get("messages", []):
             if hasattr(msg, "usage_metadata") and msg.usage_metadata:
                 total_tokens += msg.usage_metadata.get("total_tokens", 0)
-            elif "token_usage" in msg.response_metadata:
-                total_tokens += msg.response_metadata["token_usage"].get("total_tokens", 0)
+            elif hasattr(msg, "response_metadata") and "token_usage" in msg.response_metadata:
+                total_tokens += msg.response_metadata.get("token_usage", {}).get("total_tokens", 0)
                 
         # Generate final markdown report path
         os.makedirs(OUTPUT_DIR, exist_ok=True)
