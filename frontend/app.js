@@ -212,12 +212,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const safeTopic = topic.replace(/</g, '&lt;').replace(/>/g, '&gt;');
             const now = new Date();
 
-            // Sao chép nội dung báo cáo, bỏ wrapper tràn bảng
+            // Sao chép nội dung báo cáo
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = reportView.innerHTML;
+
+            // Bỏ wrapper tràn bảng — chuyển table ra ngoài
             tempDiv.querySelectorAll('.table-scroll-wrapper').forEach(el => {
                 const table = el.querySelector('table');
                 if (table) el.replaceWith(table.cloneNode(true));
+            });
+
+            // Loại bỏ các phần không cần trong bản xuất
+            // Bỏ placeholder-text (chỉ hiển thị khi chưa có báo cáo)
+            tempDiv.querySelectorAll('.placeholder-text').forEach(el => el.remove());
+            // Bỏ các icon Font Awesome (sẽ không hiển thị trong file xuất)
+            tempDiv.querySelectorAll('i.fa-solid, i.fa-regular, i.fa-brands, i.fas, i.far, i.fab').forEach(el => {
+                el.remove();
             });
 
             const htmlContent = `<!DOCTYPE html>
@@ -229,51 +239,168 @@ document.addEventListener('DOMContentLoaded', () => {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" crossorigin="anonymous">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    background: #f1f4f8;
+    background: #ffffff;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    font-size: 13px;
-    line-height: 1.5;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #0f172a;
   }
-  .report-page { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
 
-  /* ── Markdown Report (standalone — no header/footer) ── */
-  .markdown-report {
-    line-height: 1.75; color: #1e293b; font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    padding: 40px 50px; background: #ffffff;
-    border: 1px solid #e2e8f0; border-radius: 8px;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
-    margin: 0; max-width: 100%; width: 100%; overflow-x: hidden;
+  /* ── Report Container ── */
+  .report-page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 32px;
   }
-  .markdown-report h1 { font-size: 22px; margin-bottom: 24px; font-weight: 800; text-transform: uppercase; text-align: center; color: #000000; }
-  .markdown-report h2 { font-size: 18px; margin-top: 32px; margin-bottom: 16px; font-weight: 700; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; }
-  .markdown-report h3 { font-size: 15px; margin-top: 22px; margin-bottom: 12px; font-weight: 600; color: #1e293b; }
-  .markdown-report h4 { font-size: 14px; margin-top: 18px; margin-bottom: 10px; font-weight: 700; color: #334155; }
-  .markdown-report h5 { font-size: 13px; margin-top: 16px; margin-bottom: 8px; font-weight: 700; color: #475569; }
-  .markdown-report h6 { font-size: 13px; margin-top: 14px; margin-bottom: 6px; font-weight: 600; font-style: italic; color: #64748b; }
-  .markdown-report p  { margin-bottom: 14px; font-size: 14.2px; color: #0f172a; line-height: 1.7; }
-  .markdown-report blockquote { border-left: 4px solid #94a3b8; padding: 8px 16px; margin: 16px 24px; color: #1e293b; font-style: italic; background: #f1f5f9; border-radius: 0 8px 8px 0; }
-  .markdown-report b, .markdown-report strong { color: #000000; font-weight: 700; }
-  .markdown-report ul, .markdown-report ol { margin-left: 24px; margin-bottom: 14px; font-size: 14.2px; color: #0f172a; }
-  .markdown-report li { margin-bottom: 8px; line-height: 1.6; }
-  .markdown-report ul ul, .markdown-report ol ul { margin-left: 20px; margin-top: 4px; margin-bottom: 4px; list-style-type: circle; }
-  .markdown-report ul ul li, .markdown-report ol ul li { font-size: 13.5px; color: #1e293b; }
-  .markdown-report .table-scroll-wrapper { overflow-x: auto; margin: 20px 0; border-top: 2px solid #000000; border-bottom: 2px solid #000000; }
-  .markdown-report table { display: table; width: 100%; min-width: 100%; table-layout: auto; border-collapse: collapse; margin: 0; font-size: 12.5px; border-top: none; border-bottom: none; word-wrap: normal; }
-  .markdown-report th, .markdown-report td { border: none; padding: 8px 12px; text-align: left; white-space: normal; word-wrap: normal; word-break: normal; overflow-wrap: break-word; min-width: 80px; }
-  .markdown-report th { border-bottom: 1px solid #000000; font-weight: 700; color: #000000; background: transparent; }
-  .markdown-report td { border-bottom: 0.5px solid #e5e7eb; color: #000000; }
-  .markdown-report table th:first-child:nth-last-child(5) { width: 8%; }
-  .markdown-report table th:nth-child(2):nth-last-child(4) { width: 17%; }
-  .markdown-report table th:nth-child(3):nth-last-child(3) { width: 10%; }
-  .markdown-report table th:nth-child(4):nth-last-child(2) { width: 30%; }
-  .markdown-report table th:nth-child(5):nth-last-child(1) { width: 35%; }
-  .markdown-report code { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 3px; padding: 2px 4px; font-family: 'Fira Code', monospace; font-size: 11px; color: #111827; }
-  .markdown-report pre { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin: 16px 0; }
-  .markdown-report pre code { padding: 0; background: transparent; border: none; font-size: 11px; color: #111827; }
-  .markdown-report img { max-width: 100%; height: auto; display: block; margin: 16px auto; }
+
+  /* ── Markdown Report ── */
+  .markdown-report {
+    line-height: 1.75;
+    color: #1e293b;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    padding: 48px 56px;
+    background: #ffffff;
+    margin: 0;
+    max-width: 100%;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* ── Headings ── */
+  .markdown-report h1 {
+    font-size: 24px; margin-bottom: 28px; font-weight: 800;
+    text-transform: uppercase; text-align: center; color: #000000;
+    letter-spacing: 0.3px;
+  }
+  .markdown-report h2 {
+    font-size: 19px; margin-top: 36px; margin-bottom: 18px; font-weight: 700;
+    color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;
+  }
+  .markdown-report h3 {
+    font-size: 16px; margin-top: 26px; margin-bottom: 14px; font-weight: 600;
+    color: #1e293b;
+  }
+  .markdown-report h4 {
+    font-size: 14.5px; margin-top: 20px; margin-bottom: 12px; font-weight: 700;
+    color: #334155;
+  }
+  .markdown-report h5 {
+    font-size: 13.5px; margin-top: 18px; margin-bottom: 10px; font-weight: 700;
+    color: #475569;
+  }
+  .markdown-report h6 {
+    font-size: 13px; margin-top: 16px; margin-bottom: 8px; font-weight: 600;
+    font-style: italic; color: #64748b;
+  }
+
+  /* ── Paragraphs ── */
+  .markdown-report p {
+    margin-bottom: 14px; font-size: 14.2px; color: #0f172a; line-height: 1.8;
+  }
+
+  /* ── Blockquote ── */
+  .markdown-report blockquote {
+    border-left: 4px solid #94a3b8; padding: 10px 18px; margin: 18px 28px;
+    color: #1e293b; font-style: italic; background: #f1f5f9;
+    border-radius: 0 8px 8px 0;
+  }
+
+  /* ── Bold ── */
+  .markdown-report b, .markdown-report strong {
+    color: #000000; font-weight: 700;
+  }
+
+  /* ── Lists ── */
+  .markdown-report ul, .markdown-report ol {
+    margin-left: 24px; margin-bottom: 14px; font-size: 14.2px; color: #0f172a;
+  }
+  .markdown-report li { margin-bottom: 8px; line-height: 1.7; }
+  .markdown-report ul ul, .markdown-report ol ul {
+    margin-left: 20px; margin-top: 4px; margin-bottom: 4px; list-style-type: circle;
+  }
+  .markdown-report ul ul li, .markdown-report ol ul li {
+    font-size: 13.5px; color: #1e293b;
+  }
+
+  /* ── Tables ── */
+  .markdown-report table {
+    display: table; width: 100%; table-layout: auto;
+    border-collapse: collapse; margin: 20px 0; font-size: 12.5px;
+    border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a;
+    word-wrap: normal;
+  }
+  .markdown-report th, .markdown-report td {
+    border: none; padding: 10px 14px; text-align: left;
+    white-space: normal; word-wrap: normal; word-break: normal;
+    overflow-wrap: break-word; min-width: 60px;
+  }
+  .markdown-report th {
+    border-bottom: 2px solid #0f172a; font-weight: 700; color: #000000;
+    background: #f8fafc;
+  }
+  .markdown-report td {
+    border-bottom: 1px solid #e5e7eb; color: #0f172a;
+  }
+  .markdown-report tr:last-child td { border-bottom: none; }
+
+  /* ── Code ── */
+  .markdown-report code {
+    background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 3px;
+    padding: 2px 5px; font-family: 'Fira Code', monospace; font-size: 11.5px;
+    color: #111827;
+  }
+  .markdown-report pre {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
+    padding: 14px 16px; overflow-x: auto; white-space: pre-wrap;
+    word-break: break-all; margin: 18px 0;
+  }
+  .markdown-report pre code {
+    padding: 0; background: transparent; border: none; font-size: 11.5px;
+    color: #1e293b;
+  }
+
+  /* ── Images ── */
+  .markdown-report img {
+    max-width: 100%; height: auto; display: block; margin: 18px auto;
+  }
+
+  /* ── KaTeX Math Formulas ── */
+  .markdown-report .katex-display {
+    background: transparent !important;
+    border-left: none !important;
+    padding: 12px 0 !important;
+    margin: 20px 0 !important;
+    box-shadow: none !important;
+    overflow-x: auto;
+  }
+  .markdown-report .katex {
+    font-size: 1.05em !important;
+  }
+  .markdown-report .text-danger {
+    color: #dc2626; font-family: 'Fira Code', monospace; font-size: 12px;
+  }
+
+  /* ── Horizontal Rule ── */
+  .markdown-report hr {
+    border: none; border-top: 1px solid #e2e8f0; margin: 28px 0;
+  }
+
+  /* ── Print Styles ── */
+  @media print {
+    body { background: #fff; font-size: 12pt; }
+    .report-page { padding: 0; max-width: 100%; }
+    .markdown-report { padding: 0; box-shadow: none; }
+    .markdown-report h1 { font-size: 20pt; }
+    .markdown-report h2 { font-size: 15pt; }
+    .markdown-report h3 { font-size: 13pt; }
+    .markdown-report p { font-size: 11pt; line-height: 1.6; }
+    .markdown-report table { font-size: 9pt; }
+    .markdown-report .katex-display { margin: 10px 0 !important; }
+  }
 </style>
 </head>
 <body>
@@ -1972,35 +2099,51 @@ document.addEventListener('DOMContentLoaded', () => {
         const displayMath = [];
         const inlineMath = [];
 
+        // Display math: $$...$$ — must be on its own line(s)
         processed = processed.replace(/\$\$([\s\S]+?)\$\$/g, (match, math) => {
             const placeholder = `MATHBLOCKPLACEHOLDER${displayMath.length}`;
-            displayMath.push(math);
-            return placeholder;
+            displayMath.push(math.trim());
+            return `\n\n${placeholder}\n\n`;
         });
 
+        // Inline math: $...$ — single line, no newline inside
         processed = processed.replace(/\$([^\$\n]+?)\$/g, (match, math) => {
             const placeholder = `MATHINLINEPLACEHOLDER${inlineMath.length}`;
-            inlineMath.push(math);
+            inlineMath.push(math.trim());
             return placeholder;
         });
 
         let html = marked.parse(processed);
 
+        // Replace display math placeholders (marked may wrap in <p> tags)
         displayMath.forEach((math, idx) => {
             try {
                 const rendered = window.katex ? window.katex.renderToString(math, { displayMode: true, throwOnError: false }) : math;
-                html = html.replace(`MATHBLOCKPLACEHOLDER${idx}`, rendered);
+                // Handle case where marked wraps placeholder in <p>...</p>
+                const pWrapped = `<p>${`MATHBLOCKPLACEHOLDER${idx}`}</p>`;
+                if (html.includes(pWrapped)) {
+                    html = html.replace(pWrapped, `<div class="katex-display">${rendered}</div>`);
+                } else {
+                    html = html.replace(`MATHBLOCKPLACEHOLDER${idx}`, `<div class="katex-display">${rendered}</div>`);
+                }
             } catch (e) {
-                html = html.replace(`MATHBLOCKPLACEHOLDER${idx}`, `<span class="text-danger">${math}</span>`);
+                const fallback = `<span class="text-danger">${math.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`;
+                const pWrapped = `<p>${`MATHBLOCKPLACEHOLDER${idx}`}</p>`;
+                if (html.includes(pWrapped)) {
+                    html = html.replace(pWrapped, `<div class="katex-display">${fallback}</div>`);
+                } else {
+                    html = html.replace(`MATHBLOCKPLACEHOLDER${idx}`, `<div class="katex-display">${fallback}</div>`);
+                }
             }
         });
 
+        // Replace inline math placeholders
         inlineMath.forEach((math, idx) => {
             try {
                 const rendered = window.katex ? window.katex.renderToString(math, { displayMode: false, throwOnError: false }) : math;
                 html = html.replace(`MATHINLINEPLACEHOLDER${idx}`, rendered);
             } catch (e) {
-                html = html.replace(`MATHINLINEPLACEHOLDER${idx}`, `<span class="text-danger">${math}</span>`);
+                html = html.replace(`MATHINLINEPLACEHOLDER${idx}`, `<span class="text-danger">${math.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`);
             }
         });
 
