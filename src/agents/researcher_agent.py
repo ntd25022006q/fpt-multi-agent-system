@@ -1,6 +1,7 @@
 import time
 import os
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+import asyncio
+from langchain_core.messages import SystemMessage, HumanMessage
 from src.state import ResearchState
 from src.utils.llm_factory import create_llm, parse_agent_json, get_actual_model_used
 from src.utils.display import print_agent_start, print_agent_info, print_agent_complete
@@ -140,7 +141,6 @@ async def researcher_node(state: ResearchState, config: RunnableConfig = None) -
         })
         
     # 1. Fetch RAG Context (run in a thread to keep event loop responsive)
-    import asyncio
     context, citations = await asyncio.to_thread(get_rag_context, state['topic'], state.get('query_type', 'consulting'))
     
     # 2. Language instruction
@@ -187,7 +187,7 @@ async def researcher_node(state: ResearchState, config: RunnableConfig = None) -
     if hasattr(response, "usage_metadata") and response.usage_metadata:
         tokens = response.usage_metadata.get("total_tokens", 0)
     elif "token_usage" in response.response_metadata:
-        tokens = response.response_metadata["token_usage"].get("total_tokens", 0)
+        tokens = response.response_metadata.get("token_usage", {}).get("total_tokens", 0)
         
     if tokens == 0:
         tokens = (len(RESEARCHER_PROMPT) + len(human_content) + len(response.content)) // 4
