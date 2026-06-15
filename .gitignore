@@ -28,4 +28,7 @@ Thumbs.db
 !.env.example
 .vercel/
 
+# Headroom
+.headroom/
+
 
