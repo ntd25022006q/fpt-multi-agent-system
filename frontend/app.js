@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadGroup    = document.getElementById('download-group');
     const downloadPdfBtn   = document.getElementById('download-pdf-btn');
     const downloadDiagBtn  = document.getElementById('download-diagram-btn');
-    const downloadMdBtn    = document.getElementById('download-md-btn');
 
     const statTime         = document.getElementById('stat-time');
     const statTokens       = document.getElementById('stat-tokens');
@@ -205,54 +204,6 @@ document.addEventListener('DOMContentLoaded', () => {
     //  DOWNLOAD FUNCTIONS
     // ════════════════════════════════════════════════════════════════════════
 
-    // ── Helper: Build clean print-ready HTML ─────────────────────────────────
-    function buildPrintHTML(bodyContent, topic) {
-        const dateStr = new Date().toLocaleDateString('vi-VN', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-        });
-        return `<!DOCTYPE html>
-<html lang="vi">
-<head>
-<meta charset="UTF-8">
-<title>Báo Cáo Chi Tiết — FPT Software</title>
-<style>
-@page { size: A4; margin: 20mm 18mm 24mm 18mm; }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Segoe UI',Arial,sans-serif;font-size:10.5pt;color:#1a202c;line-height:1.7;}
-.hdr{border-bottom:3px solid #0f172a;padding-bottom:10px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-end;}
-.hdr .co{font-size:14pt;font-weight:800;color:#0f172a;}
-.hdr .dp{font-size:9pt;color:#6b7a90;margin-top:2px;}
-.hdr .mt{text-align:right;font-size:9pt;color:#6b7a90;line-height:1.5;}
-h1{font-size:17pt;font-weight:800;color:#0f172a;border-bottom:2px solid #0f172a;padding-bottom:5px;margin:16px 0 10px;page-break-after:avoid;}
-h2{font-size:12.5pt;font-weight:700;color:#0f172a;margin:16px 0 6px;border-bottom:1px solid #e2e8f0;padding-bottom:2px;page-break-after:avoid;}
-h3{font-size:10.5pt;font-weight:700;color:#1e293b;margin:12px 0 4px;page-break-after:avoid;}
-p{margin-bottom:7px;color:#2d3748;}
-ul,ol{margin:4px 0 8px 18px;color:#2d3748;}
-li{margin-bottom:2px;}
-table{width:100%;border-collapse:collapse;margin:10px 0 14px;font-size:9pt;page-break-inside:avoid;}
-thead th{background:#0f172a;color:#fff;font-weight:700;padding:6px 8px;border:1px solid #0f172a;}
-tbody td{border:1px solid #cbd5e1;padding:5px 8px;vertical-align:top;}
-tbody tr:nth-child(even) td{background:#f8fafc;}
-code{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:3px;padding:1px 4px;font-family:'Courier New',monospace;font-size:8pt;color:#1e293b;}
-pre{background:#0f172a;border-radius:4px;padding:10px 12px;margin:8px 0;page-break-inside:avoid;}
-pre code{background:none;border:none;color:#e2e8f0;font-size:7.5pt;padding:0;}
-a{color:#0f172a;}
-hr{border:none;border-top:1px solid #e2e8f0;margin:14px 0;}
-blockquote{border-left:3px solid #0f172a;padding:4px 10px;margin:8px 0;background:#f8fafc;font-style:italic;color:#334155;}
-em{font-style:italic;}strong{font-weight:700;}
-@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}h1,h2,h3{page-break-after:avoid;}table,pre{page-break-inside:avoid;}}
-</style>
-</head>
-<body>
-<div class="hdr">
-  <div><div class="co">FPT Software</div><div class="dp">Phòng Nghiên Cứu &amp; Tư Vấn Chiến Lược AI-First</div></div>
-  <div class="mt">Ngày xuất: ${dateStr}<br>Chủ đề: ${topic || 'Báo cáo chi tiết chiến lược'}<br>Hệ thống: Multi-Agent</div>
-</div>
-${bodyContent}
-</body>
-</html>`;
-    }
-
     // ── 1. Xuất báo cáo chi tiết (PDF) ──────────────────────────────────────
     if (downloadPdfBtn) {
         downloadPdfBtn.addEventListener('click', () => {
@@ -272,29 +223,86 @@ ${bodyContent}
                     downloadPdfBtn.disabled = false;
                     return;
                 }
-                const printHtml = buildPrintHTML(reportView.innerHTML, topicInput?.value || '');
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = printHtml;
-                tempDiv.style.position = 'absolute';
-                tempDiv.style.left = '-9999px';
-                tempDiv.style.top = '0';
-                document.body.appendChild(tempDiv);
+
+                // Tạo vùng in ẩn có cấu trúc DOM chuẩn cho html2canvas
+                const dateStr = new Date().toLocaleDateString('vi-VN', {
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                });
+                const topic = topicInput?.value || 'Báo cáo chi tiết chiến lược';
+
+                const printContainer = document.createElement('div');
+                printContainer.style.cssText = 'position:fixed;top:0;left:0;width:794px;z-index:-9999;opacity:0;pointer-events:none;background:#ffffff;color:#1a202c;font-family:"Segoe UI",Arial,sans-serif;font-size:10.5pt;line-height:1.7;';
+
+                // Nhúng style trực tiếp vào container để html2canvas render chính xác
+                const styleEl = document.createElement('style');
+                styleEl.textContent = `
+                    @page { size: A4; margin: 20mm 18mm 24mm 18mm; }
+                    .pdf-hdr { border-bottom: 3px solid #0f172a; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+                    .pdf-hdr .co { font-size: 14pt; font-weight: 800; color: #0f172a; }
+                    .pdf-hdr .dp { font-size: 9pt; color: #6b7a90; margin-top: 2px; }
+                    .pdf-hdr .mt { text-align: right; font-size: 9pt; color: #6b7a90; line-height: 1.5; }
+                    .pdf-body h1 { font-size: 17pt; font-weight: 800; color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 5px; margin: 16px 0 10px; page-break-after: avoid; }
+                    .pdf-body h2 { font-size: 12.5pt; font-weight: 700; color: #0f172a; margin: 16px 0 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px; page-break-after: avoid; }
+                    .pdf-body h3 { font-size: 10.5pt; font-weight: 700; color: #1e293b; margin: 12px 0 4px; page-break-after: avoid; }
+                    .pdf-body p { margin-bottom: 7px; color: #2d3748; }
+                    .pdf-body ul, .pdf-body ol { margin: 4px 0 8px 18px; color: #2d3748; }
+                    .pdf-body li { margin-bottom: 2px; }
+                    .pdf-body table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 9pt; page-break-inside: avoid; }
+                    .pdf-body thead th { background: #0f172a; color: #fff; font-weight: 700; padding: 6px 8px; border: 1px solid #0f172a; }
+                    .pdf-body tbody td { border: 1px solid #cbd5e1; padding: 5px 8px; vertical-align: top; }
+                    .pdf-body tbody tr:nth-child(even) td { background: #f8fafc; }
+                    .pdf-body code { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 3px; padding: 1px 4px; font-family: 'Courier New', monospace; font-size: 8pt; color: #1e293b; }
+                    .pdf-body pre { background: #0f172a; border-radius: 4px; padding: 10px 12px; margin: 8px 0; page-break-inside: avoid; }
+                    .pdf-body pre code { background: none; border: none; color: #e2e8f0; font-size: 7.5pt; padding: 0; }
+                    .pdf-body a { color: #0f172a; }
+                    .pdf-body hr { border: none; border-top: 1px solid #e2e8f0; margin: 14px 0; }
+                    .pdf-body blockquote { border-left: 3px solid #0f172a; padding: 4px 10px; margin: 8px 0; background: #f8fafc; font-style: italic; color: #334155; }
+                    .pdf-body strong { font-weight: 700; }
+                    .pdf-body em { font-style: italic; }
+                    .pdf-body .table-scroll-wrapper { overflow: visible; }
+                `;
+                printContainer.appendChild(styleEl);
+
+                // Header báo cáo
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'pdf-hdr';
+                headerDiv.innerHTML = `
+                    <div>
+                        <div class="co">FPT Software</div>
+                        <div class="dp">Phòng Nghiên Cứu &amp; Tư Vấn Chiến Lược AI-First</div>
+                    </div>
+                    <div class="mt">
+                        Ngày xuất: ${dateStr}<br>
+                        Chủ đề: ${topic.replace(/</g,'&lt;').replace(/>/g,'&gt;')}<br>
+                        Hệ thống: Multi-Agent
+                    </div>
+                `;
+                printContainer.appendChild(headerDiv);
+
+                // Nội dung báo cáo
+                const bodyDiv = document.createElement('div');
+                bodyDiv.className = 'pdf-body';
+                // Sao chép nội dung đã render từ reportView (đã parse markdown)
+                bodyDiv.innerHTML = reportView.innerHTML;
+                printContainer.appendChild(bodyDiv);
+
+                document.body.appendChild(printContainer);
 
                 const opt = {
                     margin: [10, 12, 14, 12],
                     filename: `BaoCao_ChiTiet_FPT_${new Date().toISOString().slice(0,10)}.pdf`,
                     image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 },
+                    html2canvas: { scale: 2, useCORS: true, letterRendering: true, width: 794, windowWidth: 794 },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                     pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
                 };
 
-                html2pdf().set(opt).from(tempDiv).save().then(() => {
-                    document.body.removeChild(tempDiv);
+                html2pdf().set(opt).from(printContainer).save().then(() => {
+                    document.body.removeChild(printContainer);
                     downloadPdfBtn.innerHTML = origHTML;
                     downloadPdfBtn.disabled = false;
                 }).catch(err => {
-                    if (document.body.contains(tempDiv)) document.body.removeChild(tempDiv);
+                    if (document.body.contains(printContainer)) document.body.removeChild(printContainer);
                     console.error('Lỗi xuất PDF:', err);
                     alert(`Lỗi xuất PDF: ${err.message}`);
                     downloadPdfBtn.innerHTML = origHTML;
@@ -452,23 +460,6 @@ ${bodyContent}
         });
     }
 
-    // ── 4. Markdown Download (.md) via server API ─────────────────────────────
-    if (downloadMdBtn) {
-        downloadMdBtn.addEventListener('click', () => {
-            if (!currentMarkdown || currentMarkdown.includes('not generated yet')) {
-                alert('Chưa có báo cáo. Vui lòng chạy quy trình trước!'); return;
-            }
-
-            // Download directly from server endpoint (most reliable for UTF-8)
-            const a = document.createElement('a');
-            a.href     = getApiPrefix() + '/api/download-markdown';
-            a.download = `FPT_BaoCao_ChiTiet_${new Date().toISOString().slice(0,10)}.md`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        });
-    }
-
     // ════════════════════════════════════════════════════════════════════════
     //  PANEL HIGHLIGHT HELPER
     // ════════════════════════════════════════════════════════════════════════
@@ -540,7 +531,7 @@ ${bodyContent}
         reportView.style.maxWidth = '100%';
         reportView.style.margin = '5px 0';
         reportView.innerHTML = `
-            <h1 style="font-size: 18px; font-weight: 800; border-bottom: 2px solid var(--fpt-blue); padding-bottom: 8px; color: var(--fpt-blue); text-transform: uppercase; text-align: center; letter-spacing: 0.5px; margin: 0;">BÁO CÁO CHƯA ĐƯỢC TẠO</h1>
+            <h1 style="font-size: 18px; font-weight: 800; border-bottom: 2px solid #0054a6; padding-bottom: 8px; color: #0054a6; text-transform: uppercase; text-align: center; letter-spacing: 0.5px; margin: 0;">BÁO CÁO CHƯA ĐƯỢC TẠO</h1>
         `;
     };
 
@@ -554,10 +545,10 @@ ${bodyContent}
         reportView.style.maxWidth = '100%';
         reportView.style.margin = '5px 0';
         reportView.innerHTML = `
-            <div style="text-align: center; color: var(--text-muted); padding: 20px 0;">
-                <i class="fa-solid fa-file-circle-exclamation" style="font-size: 48px; color: var(--fpt-blue); margin-bottom: 16px;"></i>
-                <h3 style="margin: 0 0 10px 0; color: var(--text-primary); font-size: 16px; font-weight: 700;">Nội dung chính là Sơ đồ Quy trình</h3>
-                <p style="margin: 0 auto; font-size: 13px; max-width: 420px; line-height: 1.6; color: var(--text-secondary);">
+            <div style="text-align: center; color: #94a3b8; padding: 20px 0;">
+                <i class="fa-solid fa-file-circle-exclamation" style="font-size: 48px; color: #0054a6; margin-bottom: 16px;"></i>
+                <h3 style="margin: 0 0 10px 0; color: #1e293b; font-size: 16px; font-weight: 700;">Nội dung chính là Sơ đồ Quy trình</h3>
+                <p style="margin: 0 auto; font-size: 13px; max-width: 420px; line-height: 1.6; color: #64748b;">
                     Yêu cầu của bạn tập trung vào việc mô tả hoặc vẽ sơ đồ quy trình. 
                     Vui lòng chuyển sang tab <strong>Sơ Đồ Quy Trình</strong> ở bên trên để xem trực quan sơ đồ động và bản phân tích kiến trúc chi tiết.
                 </p>
@@ -617,7 +608,7 @@ ${bodyContent}
         mermaidOutput.style.position = 'relative';
 
         mermaidOutput.innerHTML = `
-            <h1 style="font-size: 18px; font-weight: 800; border-bottom: 2px solid var(--fpt-blue); padding-bottom: 8px; color: var(--fpt-blue); text-transform: uppercase; text-align: center; letter-spacing: 0.5px; margin: 0;">SƠ ĐỒ CHƯA ĐƯỢC TẠO</h1>
+            <h1 style="font-size: 18px; font-weight: 800; border-bottom: 2px solid #0054a6; padding-bottom: 8px; color: #0054a6; text-transform: uppercase; text-align: center; letter-spacing: 0.5px; margin: 0;">SƠ ĐỒ CHƯA ĐƯỢC TẠO</h1>
         `;
     };
 
@@ -1966,7 +1957,7 @@ ${bodyContent}
             } catch (e) {
                 const match = cleanText.match(/"reason"\s*:\s*"([^"]*)/);
                 if (match) {
-                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cảnh hợp lệ.\n* **Lý do**: ${match[1]}`;
+                    processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cầu hợp lệ.\n* **Lý do**: ${match[1]}`;
                 } else {
                     processed = `### Phân tích Yêu cầu đầu vào\n\n* **Đánh giá Ngữ cảnh**: Yêu cầu hợp lệ.`;
                 }
