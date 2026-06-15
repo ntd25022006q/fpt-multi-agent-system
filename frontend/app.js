@@ -211,7 +211,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const topic = topicInput?.value || 'Báo cáo chi tiết chiến lược';
             const safeTopic = topic.replace(/</g, '&lt;').replace(/>/g, '&gt;');
             const now = new Date();
-            const dateStr = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
             // Sao chép nội dung báo cáo, bỏ wrapper tràn bảng
             const tempDiv = document.createElement('div');
@@ -230,62 +229,22 @@ document.addEventListener('DOMContentLoaded', () => {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
 <style>
-  :root {
-    --fpt-blue: #0054a6;
-    --fpt-blue-light: #1a6dc7;
-    --fpt-orange: #e8621a;
-    --fpt-navy: #0f172a;
-    --text-primary: #0f172a;
-    --text-secondary: #4b5a6e;
-    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
-    --font-code: 'Fira Code', monospace;
-  }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     background: #f1f4f8;
-    color: var(--text-primary);
-    font-family: var(--font-body);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-size: 13px;
     line-height: 1.5;
   }
   .report-page { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
 
-  /* Header */
-  .export-header {
-    background: linear-gradient(135deg, #0054a6 0%, #1a6dc7 100%);
-    color: #ffffff;
-    padding: 28px 36px;
-    border-radius: 10px;
-    margin-bottom: 24px;
-    box-shadow: 0 4px 14px rgba(0,84,166,0.18);
-    display: flex;
-    align-items: center;
-    gap: 18px;
-  }
-  .export-header .header-icon {
-    width: 48px; height: 48px;
-    background: rgba(255,255,255,0.15);
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px; flex-shrink: 0;
-  }
-  .export-header .header-text h1 {
-    font-size: 18px; font-weight: 700; margin-bottom: 4px; line-height: 1.3;
-  }
-  .export-header .header-text .meta {
-    font-size: 12px; opacity: 0.85; display: flex; gap: 16px; flex-wrap: wrap;
-  }
-  .export-header .header-text .meta i { margin-right: 4px; }
-
-  /* Markdown Report */
   .markdown-report {
     line-height: 1.75; color: #1e293b; font-family: 'Inter', system-ui, -apple-system, sans-serif;
     padding: 40px 50px; background: #ffffff;
     border: 1px solid #e2e8f0; border-radius: 8px;
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
-    margin: 15px 0; max-width: 100%; width: 100%; overflow-x: hidden;
+    margin: 0; max-width: 100%; width: 100%; overflow-x: hidden;
   }
   .markdown-report h1 { font-size: 22px; margin-bottom: 24px; font-weight: 800; text-transform: uppercase; text-align: center; color: #000000; }
   .markdown-report h2 { font-size: 18px; margin-top: 32px; margin-bottom: 16px; font-weight: 700; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; }
@@ -314,33 +273,11 @@ document.addEventListener('DOMContentLoaded', () => {
   .markdown-report pre { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin: 16px 0; }
   .markdown-report pre code { padding: 0; background: transparent; border: none; font-size: 11px; color: #111827; }
   .markdown-report img { max-width: 100%; height: auto; display: block; margin: 16px auto; }
-
-  /* Footer */
-  .export-footer {
-    text-align: center; padding: 18px; color: #94a3b8; font-size: 11px; margin-top: 16px;
-  }
-  .export-footer i { margin-right: 4px; }
-
-  @media print { .export-header { break-inside: avoid; } }
 </style>
 </head>
 <body>
 <div class="report-page">
-  <div class="export-header">
-    <div class="header-icon"><i class="fa-solid fa-file-lines"></i></div>
-    <div class="header-text">
-      <h1><i class="fa-solid fa-chart-line" style="margin-right:6px;"></i>${safeTopic}</h1>
-      <div class="meta">
-        <span><i class="fa-solid fa-building"></i> FPT Software</span>
-        <span><i class="fa-solid fa-robot"></i> Multi-Agent AI System</span>
-        <span><i class="fa-solid fa-calendar"></i> ${dateStr}</span>
-      </div>
-    </div>
-  </div>
   <div class="markdown-report">${tempDiv.innerHTML}</div>
-  <div class="export-footer">
-    <i class="fa-solid fa-shield-halved"></i> Báo cáo được tạo tự động bởi hệ thống Multi-Agent AI — FPT Software &copy; ${now.getFullYear()}
-  </div>
 </div>
 </body>
 </html>`;
@@ -358,7 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── 2. Xuất sơ đồ quy trình (PNG) ─────────────────────────────────────
+    // ── 2. Xuất sơ đồ quy trình (PNG — colorful header/footer) ──────────────
     if (downloadDiagBtn) {
         downloadDiagBtn.addEventListener('click', async () => {
             const svgEl = document.querySelector('#mermaid-render-output svg');
@@ -371,6 +308,10 @@ document.addEventListener('DOMContentLoaded', () => {
             downloadDiagBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo PNG…';
             downloadDiagBtn.disabled = true;
 
+            const topic = topicInput?.value || 'FPT Software';
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
             try {
                 // Serialize SVG
                 const cloned = svgEl.cloneNode(true);
@@ -380,9 +321,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 cloned.style.transform = 'none';
                 cloned.style.transformOrigin = 'unset';
                 cloned.style.transition = 'none';
-                
+
                 // Strip the ID prefix (e.g. #mermaid-12345) from selectors in style blocks
-                // to make sure styles resolve correctly inside the standalone SVG image document
                 const id = svgEl.getAttribute('id');
                 cloned.querySelectorAll('style').forEach(styleEl => {
                     let cssText = styleEl.innerHTML;
@@ -416,6 +356,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
                 const svgUrl  = URL.createObjectURL(svgBlob);
 
+                const HEADER_H = 64;
+                const FOOTER_H = 36;
+
                 const downloadSvgFallback = () => {
                     try {
                         URL.revokeObjectURL(svgUrl);
@@ -423,7 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const fallbackUrl = URL.createObjectURL(fallbackBlob);
                         const a = document.createElement('a');
                         a.href     = fallbackUrl;
-                        a.download = `FPT_SoDo_QuyTrinh_${new Date().toISOString().slice(0,10)}.svg`;
+                        a.download = `FPT_SoDo_QuyTrinh_${now.toISOString().slice(0,10)}.svg`;
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);
@@ -436,20 +379,72 @@ document.addEventListener('DOMContentLoaded', () => {
                     downloadDiagBtn.disabled = false;
                 };
 
-                // Draw onto canvas for PNG conversion
+                // Draw onto canvas with colorful header & footer
                 const img = new Image();
                 img.onload = () => {
                     try {
                         const canvas  = document.createElement('canvas');
-                        const scale   = 2; // Retina resolution scaling factor
+                        const scale   = 2;
+                        const totalH  = HEADER_H + h + FOOTER_H;
                         canvas.width  = w * scale;
-                        canvas.height = h * scale;
+                        canvas.height = totalH * scale;
                         const ctx = canvas.getContext('2d');
                         if (!ctx) throw new Error("Could not get 2D context");
                         ctx.scale(scale, scale);
+
+                        // ── Colorful header background ──
+                        const hdrGrad = ctx.createLinearGradient(0, 0, w, 0);
+                        hdrGrad.addColorStop(0, '#0054a6');
+                        hdrGrad.addColorStop(0.3, '#1a6dc7');
+                        hdrGrad.addColorStop(0.6, '#8b5cf6');
+                        hdrGrad.addColorStop(1, '#e8621a');
+                        ctx.fillStyle = hdrGrad;
+                        ctx.fillRect(0, 0, w, HEADER_H);
+
+                        // Header accent bar (thin rainbow strip)
+                        const accentGrad = ctx.createLinearGradient(0, 0, w, 0);
+                        accentGrad.addColorStop(0, '#e05577');
+                        accentGrad.addColorStop(0.2, '#2f88d4');
+                        accentGrad.addColorStop(0.4, '#8b5cf6');
+                        accentGrad.addColorStop(0.6, '#d97706');
+                        accentGrad.addColorStop(0.8, '#16a069');
+                        accentGrad.addColorStop(1, '#0d9488');
+                        ctx.fillStyle = accentGrad;
+                        ctx.fillRect(0, HEADER_H - 4, w, 4);
+
+                        // Header text
                         ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(0, 0, w, h);
-                        ctx.drawImage(img, 0, 0, w, h);
+                        ctx.font = 'bold 16px Inter, system-ui, sans-serif';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('\u{1F4CA}  ' + topic.substring(0, 60), 18, HEADER_H / 2 - 2);
+
+                        ctx.font = '11px Inter, system-ui, sans-serif';
+                        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                        ctx.textAlign = 'right';
+                        ctx.fillText('FPT Software \u2022 Multi-Agent AI System', w - 18, HEADER_H / 2 - 2);
+                        ctx.textAlign = 'left';
+
+                        // ── Diagram body ──
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, HEADER_H, w, h);
+                        ctx.drawImage(img, 0, HEADER_H, w, h);
+
+                        // ── Colorful footer ──
+                        const ftrGrad = ctx.createLinearGradient(0, 0, w, 0);
+                        ftrGrad.addColorStop(0, '#0d9488');
+                        ftrGrad.addColorStop(0.5, '#2f88d4');
+                        ftrGrad.addColorStop(1, '#0054a6');
+                        ctx.fillStyle = ftrGrad;
+                        ctx.fillRect(0, HEADER_H + h, w, FOOTER_H);
+
+                        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                        ctx.font = '10px Inter, system-ui, sans-serif';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('\u{1F6E1}  FPT Software \u00A9 ' + now.getFullYear(), 18, HEADER_H + h + FOOTER_H / 2);
+                        ctx.textAlign = 'right';
+                        ctx.fillText(dateStr, w - 18, HEADER_H + h + FOOTER_H / 2);
+                        ctx.textAlign = 'left';
+
                         URL.revokeObjectURL(svgUrl);
 
                         canvas.toBlob(blob => {
@@ -458,7 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const pngUrl = URL.createObjectURL(blob);
                                 const a = document.createElement('a');
                                 a.href     = pngUrl;
-                                a.download = `FPT_SoDo_QuyTrinh_${new Date().toISOString().slice(0,10)}.png`;
+                                a.download = `FPT_SoDo_QuyTrinh_${now.toISOString().slice(0,10)}.png`;
                                 document.body.appendChild(a);
                                 a.click();
                                 document.body.removeChild(a);
