@@ -336,6 +336,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     downloadPdfBtn.disabled = false;
                 }
             } catch (err) {
+                // Cleanup: remove printContainer if it was added to DOM but not cleaned up
+                const staleContainer = document.getElementById('pdf-print-area');
+                if (staleContainer && document.body.contains(staleContainer)) {
+                    document.body.removeChild(staleContainer);
+                }
                 console.error('Lỗi xuất PDF:', err);
                 alert(`Lỗi xuất PDF: ${err.message}`);
                 downloadPdfBtn.innerHTML = origHTML;
@@ -1442,7 +1447,8 @@ ${reportView.innerHTML}
                 3. Nhập API Key vừa lấy vào mục <strong>Khóa API OpenRouter</strong> để tiếp tục sử dụng hệ thống.<br><br>
                 <em>Hoặc nhập Khóa API Ollama Cloud mới của bạn vào ô tương ứng.</em>`;
             } else {
-                logDiv.innerHTML = `<span style="font-weight:bold;">[Lỗi Hệ Thống]</span> Tiến trình gặp sự cố: <strong>${cleanErr}</strong>. Vui lòng kiểm tra lại cấu hình hoặc API Key.`;
+                const safeErr = cleanErr.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                logDiv.innerHTML = `<span style="font-weight:bold;">[Lỗi Hệ Thống]</span> Tiến trình gặp sự cố: <strong>${safeErr}</strong>. Vui lòng kiểm tra lại cấu hình hoặc API Key.`;
             }
             consoleOutput.appendChild(logDiv);
             consoleOutput.scrollTop = consoleOutput.scrollHeight;
@@ -1918,29 +1924,12 @@ ${reportView.innerHTML}
                 return;
             }
 
-            // Case 3: SSE dropped mid-run — attempt auto-reconnect with backoff
+            // Case 3: SSE dropped mid-run — switch to polling instead of re-triggering pipeline
+            // CRITICAL FIX: Previously reconnecting via connectSse(sseCurrentUrl) would re-hit
+            // /api/run and start a DUPLICATE pipeline. Now we poll /api/report instead.
             if (eventSource) { eventSource.close(); eventSource = null; }
 
-            sseReconnectCount++;
-            if (sseReconnectCount <= MAX_SSE_RECONNECTS) {
-                // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 32s
-                const delay = Math.min(1000 * Math.pow(2, sseReconnectCount - 1), 32000);
-                console.warn(`SSE dropped (attempt ${sseReconnectCount}/${MAX_SSE_RECONNECTS}), reconnecting in ${delay}ms...`);
-                // Show a subtle reconnecting indicator (not the alarming orange banner)
-                if (statStatus) {
-                    statStatus.textContent = `Đang kết nối lại (${sseReconnectCount})…`;
-                    statStatus.style.color = '#f59e0b';
-                }
-                sseReconnectTimer = setTimeout(() => {
-                    if (!hasCompletedSuccessfully) {
-                        connectSse(sseCurrentUrl);
-                    }
-                }, delay);
-                return;
-            }
-
-            // Case 4: Too many reconnect attempts — fall back to polling
-            console.error('SSE reconnect exhausted, switching to polling...');
+            console.warn('SSE dropped mid-run, switching to polling /api/report to avoid duplicate pipeline...');
             startPollingForReport();
         };
     }
@@ -2620,13 +2609,11 @@ ${reportView.innerHTML}
                     eventSource = null;
                 }
 
-                const ollamaKey = localStorage.getItem('fpt_ollama_api_key') || '';
-                const openrouterKey = localStorage.getItem('fpt_openrouter_api_key') || '';
-                let url = getApiPrefix() + `/api/run?topic=${encodeURIComponent(activeSearch.topic)}`;
-                if (ollamaKey) url += `&ollama_api_key=${encodeURIComponent(ollamaKey)}`;
-                if (openrouterKey) url += `&openrouter_api_key=${encodeURIComponent(openrouterKey)}`;
-
-                connectSse(url);
+                // FIX: Instead of re-triggering /api/run (which would create a duplicate pipeline
+                // now blocked by concurrent protection), poll /api/report to wait for the existing
+                // pipeline to complete. The original run is likely still processing on the server.
+                console.warn('Restoring active search — switching to polling to avoid duplicate pipeline...');
+                startPollingForReport();
             }
         } catch (e) {
             console.error('Error restoring active search:', e);

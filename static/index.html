@@ -22,8 +22,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/contrib/auto-render.min.js" crossorigin="anonymous"></script>
     <!-- Mermaid Diagram Library -->
     <script src="lib/mermaid.min.js"></script>
-    <!-- html-docx-js: converts HTML to real .docx Word file -->
-    <script src="lib/html-docx.js"></script>
     <!-- html2pdf.js: client-side PDF generation with auto-download -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous"></script>
     <script>
@@ -91,7 +89,12 @@
                         <button id="stop-btn" type="button" class="glow-button" style="background: var(--fpt-orange); display: none; width: auto; padding: 10px 14px;" title="Tạm Dừng Phân Tích">
                             <i class="fa-solid fa-pause"></i> Tạm Dừng
                         </button>
+                        <button id="chat-upload-btn" type="button" class="action-btn" title="Tải lên tệp báo cáo (.md, .txt) hoặc sơ đồ (.png, .svg)" style="padding: 10px 12px; font-size: 13px; border-radius: 6px; min-width: 38px;">
+                            <i class="fa-solid fa-paperclip"></i>
+                        </button>
+                        <input type="file" id="chat-file-input" accept=".md,.txt,.png,.jpg,.jpeg,.svg" style="display: none;">
                     </div>
+                    <div id="chat-upload-status-text" style="display:none; font-size:10px; color:var(--text-muted); margin-top:4px;"></div>
 
                     <!-- Download Buttons (hidden until report is ready) -->
                     <div id="download-group" style="display:none; flex-direction:column; gap:6px; margin-top:10px;">
@@ -330,6 +333,6 @@
     </div>
 
     <!-- App Script -->
-    <script src="app.js?v=33"></script>
+    <script src="app.js?v=37"></script>
 </body>
 </html>

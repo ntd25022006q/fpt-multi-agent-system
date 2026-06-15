@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.graph import app as graph_app
+from src.utils.cleaner import clean_internal_filenames
 from config import WORKSPACE_DIR, OUTPUT_DIR, RUNNING_DIR
 
 # ── Encoding ──────────────────────────────────────────────────────────────────
@@ -24,6 +25,10 @@ for _s in (sys.stdout, sys.stderr):
 
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(title="FPT Software AI-First Research & Detailed Report Dashboard")
+
+# ── Concurrent pipeline protection ───────────────────────────────────────────
+_pipeline_running = False
+_pipeline_lock = asyncio.Lock()
 
 app.add_middleware(
     CORSMiddleware,
@@ -224,6 +229,12 @@ async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: s
     if len(topic) > 5000:
         return {"error": "Chủ đề vượt quá giới hạn 5000 ký tự."}
 
+    # Prevent concurrent pipeline runs to protect LLM API quotas and server resources
+    global _pipeline_running
+    if _pipeline_running:
+        return {"error": "Hệ thống đang xử lý một yêu cầu khác. Vui lòng đợi hoàn thành trước khi gửi yêu cầu mới."}
+    _pipeline_running = True
+
     async def event_generator():
         initial_state = {
             "topic": topic,
@@ -276,6 +287,8 @@ async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: s
                     "error": str(exc) + "\n" + traceback.format_exc()
                 })
             finally:
+                global _pipeline_running
+                _pipeline_running = False
                 await stream_queue.put({
                     "type": "done_sentinel"
                 })
@@ -347,7 +360,6 @@ async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: s
                     final_report = final_state.get("report", "# No report generated").replace("***", "")
                     
                     # Clean internal filenames programmatically
-                    from src.utils.cleaner import clean_internal_filenames
                     final_report = clean_internal_filenames(final_report)
                     Path(OUTPUT_DIR).mkdir(exist_ok=True)
                     (Path(OUTPUT_DIR) / "research_report.md").write_text(final_report, encoding="utf-8")
@@ -374,7 +386,6 @@ async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: s
                     if node_name in agent_durations:
                         agent_durations[node_name] = event.get("duration", 0.0)
                         
-                    from src.utils.cleaner import clean_internal_filenames
                     if event.get("content"):
                         event["content"] = clean_internal_filenames(event["content"])
                     if event.get("thinking"):
@@ -383,7 +394,6 @@ async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: s
                     yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
                 else:
                     # Clean internal filenames in any other event that might have text fields
-                    from src.utils.cleaner import clean_internal_filenames
                     if event.get("content"):
                         event["content"] = clean_internal_filenames(event["content"])
                     if event.get("thinking"):
