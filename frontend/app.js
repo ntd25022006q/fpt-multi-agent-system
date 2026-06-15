@@ -985,6 +985,59 @@ document.addEventListener('DOMContentLoaded', () => {
         return Promise.resolve();
     }
 
+    // ── Vietnamese Text Normalizer ──────────────────────────────────────────
+    // Fix broken/stacked diacritics (NFD → NFC) and remove non-Vietnamese CJK characters
+    function normalizeVietnameseText(text) {
+        if (!text) return '';
+        // 1. Normalize Unicode: NFD decomposes, then NFC recomposes properly
+        // This fixes cases like "ệ" (e + circumflex + dot below) → "ệ" (precomposed)
+        let normalized = text.normalize('NFC');
+
+        // 2. Remove CJK Ideographs (Chinese/Japanese/Korean characters)
+        // CJK Unified Ideographs: U+4E00–U+9FFF
+        // CJK Unified Ideographs Extension A: U+3400–U+4DBF
+        // CJK Compatibility Ideographs: U+F900–U+FAFF
+        // CJK Radicals Supplement: U+2E80–U+2EFF
+        // CJK Symbols and Punctuation: U+3000–U+303F (keep 。if needed, but remove others)
+        // Kangxi Radicals: U+2F00–U+2FDF
+        // Hiragana: U+3040–U+309F
+        // Katakana: U+30A0–U+30FF
+        normalized = normalized.replace(/[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF\u2E80-\u2EFF\u2F00-\u2FDF\u3040-\u309F\u30A0-\u30FF]/g, '');
+
+        // 3. Remove CJK punctuation that's not Vietnamese (keep standard punctuation)
+        // Remove: 、。「」『』【】〔〕〖〗〘〙〚〛
+        normalized = normalized.replace(/[\u3001\u3002\u300C-\u300F\u3010-\u3011\u3014-\u301B\u3016-\u301D\u301E-\u301F]/g, '');
+
+        // 4. Clean up any double spaces left after removals
+        normalized = normalized.replace(/  +/g, ' ').replace(/\n{3,}/g, '\n\n');
+
+        return normalized.trim();
+    }
+
+    // Strip math formulas ($$...$$ and $...$) — for console log display only
+    function stripMathFormulas(text) {
+        if (!text) return '';
+        // Remove display math $$...$$
+        let cleaned = text.replace(/\$\$[\s\S]+?\$\$/g, '');
+        // Remove inline math $...$ (but not currency like $100)
+        cleaned = cleaned.replace(/\$([^\$\n]{1,}?)\$/g, (match, inner) => {
+            // If it looks like a math expression (contains letters, operators, etc.), remove it
+            if (/[a-zA-Z\u00C0-\u024F\u1E00-\u1EFF\\\/\^_=+\-*\{\}\[\]()]/.test(inner)) {
+                return '';
+            }
+            return match; // Keep currency-like patterns
+        });
+        return cleaned;
+    }
+
+    // Combined text sanitizer for console log display
+    function sanitizeConsoleText(text) {
+        if (!text) return '';
+        let cleaned = normalizeVietnameseText(text);
+        cleaned = stripMathFormulas(cleaned);
+        return cleaned;
+    }
+
     function stripMarkdown(text) {
         if (!text) return '';
         let cleaned = text
@@ -1173,7 +1226,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const thinkingContent = document.createElement('div');
             thinkingContent.style.cssText = 'white-space: pre-line; line-height: 1.5; padding: 4px 0;';
-            thinkingContent.textContent = stripMarkdown(item.thinking);
+            thinkingContent.textContent = sanitizeConsoleText(stripMarkdown(item.thinking));
             thinkingContainer.appendChild(thinkingContent);
             consoleOutput.appendChild(thinkingContainer);
         }
@@ -1703,7 +1756,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             }, -1);
                             if (thinkIdx !== -1) {
                                 activeStream.thinkingText = rawText.substring(thinkIdx, cmIdx);
-                                if (activeStream.thinkingContentEl) activeStream.thinkingContentEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.thinkingText));
+                                if (activeStream.thinkingContentEl) activeStream.thinkingContentEl.textContent = sanitizeConsoleText(cleanInternalFilenames(stripMarkdown(activeStream.thinkingText)));
                             }
                             break;
                         }
@@ -1727,7 +1780,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             }, -1);
                             if (cmStart !== -1) {
                                 activeStream.contentText = rawText.substring(cmStart, rmIdx);
-                                if (activeStream.logBodyEl) activeStream.logBodyEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.contentText));
+                                if (activeStream.logBodyEl) activeStream.logBodyEl.textContent = sanitizeConsoleText(cleanInternalFilenames(stripMarkdown(activeStream.contentText)));
                             }
                             break;
                         }
@@ -1773,13 +1826,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (idx !== -1) {
                             const after = rawText.substring(idx + offset);
                             activeStream.thinkingText = after;
-                            activeStream.thinkingContentEl.textContent = cleanInternalFilenames(stripMarkdown(after));
+                            activeStream.thinkingContentEl.textContent = sanitizeConsoleText(cleanInternalFilenames(stripMarkdown(after)));
                             consoleOutput.scrollTop = consoleOutput.scrollHeight;
                             return;
                         }
                     }
                     activeStream.thinkingText += data.token;
-                    activeStream.thinkingContentEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.thinkingText));
+                    activeStream.thinkingContentEl.textContent = sanitizeConsoleText(cleanInternalFilenames(stripMarkdown(activeStream.thinkingText)));
                 } else if (activeStream.section === 'content') {
                     if (activeStream.logBodyEl.textContent === '') {
                         let idx = -1;
@@ -1802,13 +1855,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (idx !== -1) {
                             const after = rawText.substring(idx + offset);
                             activeStream.contentText = after;
-                            activeStream.logBodyEl.textContent = cleanInternalFilenames(stripMarkdown(after));
+                            activeStream.logBodyEl.textContent = sanitizeConsoleText(cleanInternalFilenames(stripMarkdown(after)));
                             consoleOutput.scrollTop = consoleOutput.scrollHeight;
                             return;
                         }
                     }
                     activeStream.contentText += data.token;
-                    activeStream.logBodyEl.textContent = cleanInternalFilenames(stripMarkdown(activeStream.contentText));
+                    activeStream.logBodyEl.textContent = sanitizeConsoleText(cleanInternalFilenames(stripMarkdown(activeStream.contentText)));
                 } else if (activeStream.section === 'report') {
                     if (!activeStream.reportText) {
                         let idx = -1;
@@ -1836,7 +1889,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         activeStream.reportText += data.token;
                     }
                     if (activeStream.reportText) {
-                        const cleanedReportText = cleanInternalFilenames(activeStream.reportText.replace(/={2,}/g, '').replace(/\*\*\*/g, ''));
+                        const cleanedReportText = normalizeVietnameseText(cleanInternalFilenames(activeStream.reportText.replace(/={2,}/g, '').replace(/\*\*\*/g, '')));
                         currentMarkdown = cleanedReportText;
                         if (rawMarkdownText) rawMarkdownText.value = cleanedReportText;
                         throttledRenderMarkdownReport(cleanedReportText);
@@ -1920,10 +1973,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Sync with final cleaned text from server
             if (data.node === activeStream.node) {
                 if (activeStream.thinkingContentEl && data.thinking) {
-                    activeStream.thinkingContentEl.textContent = cleanInternalFilenames(stripMarkdown(data.thinking));
+                    activeStream.thinkingContentEl.textContent = sanitizeConsoleText(cleanInternalFilenames(stripMarkdown(data.thinking)));
                 }
                 if (activeStream.logBodyEl && data.content) {
-                    activeStream.logBodyEl.textContent = cleanInternalFilenames(stripMarkdown(data.content));
+                    activeStream.logBodyEl.textContent = sanitizeConsoleText(cleanInternalFilenames(stripMarkdown(data.content)));
                 }
                 activeStream.node = null;
             }
@@ -2070,10 +2123,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        let processed = content;
+        // Normalize Vietnamese text: fix broken diacritics + remove CJK chars
+        let normalizedContent = normalizeVietnameseText(content);
+        let processed = normalizedContent;
         
         // Parse Guardrail JSON into clean human-readable text
-        let cleanText = content.trim();
+        let cleanText = normalizedContent.trim();
         if (cleanText.startsWith('{') || cleanText.includes('"relevant"')) {
             try {
                 let jsonStr = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -2164,9 +2219,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function displayReportData(data) {
         if (!data || !data.report) return;
 
-        let rawReport = data.report;
-        let diagramText = data.diagram || '';
-        let explanationText = data.explanation || '';
+        // Normalize: fix broken diacritics + remove CJK chars at the source
+        let rawReport = normalizeVietnameseText(data.report);
+        let diagramText = data.diagram ? normalizeVietnameseText(data.diagram) : '';
+        let explanationText = data.explanation ? normalizeVietnameseText(data.explanation) : '';
 
         // Extract diagram if diagramText is empty and rawReport has a mermaid block
         if (!diagramText && rawReport.includes('```mermaid')) {
