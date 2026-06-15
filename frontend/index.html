@@ -46,29 +46,9 @@
                     <h2>
                         <i class="fa-solid fa-pen-to-square"></i> Câu Hỏi &amp; Yêu Cầu
                         <span class="header-actions" style="float: right; display: flex; gap: 12px; align-items: center;">
-                            <span id="connection-status-dot" style="width: 8px; height: 8px; border-radius: 50%; background-color: #94a3b8; display: inline-block; transition: background-color 0.3s; box-shadow: 0 0 4px rgba(148, 163, 184, 0.5);" title="Đang kiểm tra kết nối..."></span>
-                            <i class="fa-solid fa-gear" id="server-settings-btn" style="cursor: pointer; opacity: 0.6; font-size: 13.5px; transition: opacity 0.2s;" title="Cấu hình máy chủ"></i>
                             <i class="fa-solid fa-plus" id="new-chat-btn" style="cursor: pointer; opacity: 0.6; font-size: 13.5px; transition: opacity 0.2s;" title="Trò chuyện mới"></i>
                         </span>
                     </h2>
-
-                    <div id="server-settings-group" style="display: none; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 6px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1); flex-direction: column; gap: 8px;">
-                        <div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <label for="server-url-input" style="font-size: 11px; color: var(--text-secondary); display: block; margin: 0;">Địa chỉ Server API (Mặc định: Tự động)</label>
-                                <span id="server-connection-text" style="font-size: 10px; color: #94a3b8; font-weight: 600;">Đang kiểm tra...</span>
-                            </div>
-                            <input type="text" id="server-url-input" class="glass-input" style="padding: 6px 10px; font-size: 12px;" placeholder="Ví dụ: http://127.0.0.1:8000">
-                        </div>
-                        <div>
-                            <label for="ollama-key-input" style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Khóa API Ollama Cloud (Ghi đè mặc định)</label>
-                            <input type="password" id="ollama-key-input" class="glass-input" style="padding: 6px 10px; font-size: 12px;" placeholder="Nhập Ollama API Key của bạn">
-                        </div>
-                        <div>
-                            <label for="openrouter-key-input" style="font-size: 11px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Khóa API OpenRouter (Dự phòng lỗi 429)</label>
-                            <input type="password" id="openrouter-key-input" class="glass-input" style="padding: 6px 10px; font-size: 12px;" placeholder="Nhập OpenRouter API Key (miễn phí)">
-                        </div>
-                    </div>
 
                     <div class="form-group">
                         <label for="topic-input">Nhập nội dung cần phân tích</label>

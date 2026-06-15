@@ -32,101 +32,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Stop element
     const stopBtn = document.getElementById('stop-btn');
 
-    const serverSettingsBtn = document.getElementById('server-settings-btn');
-    const serverSettingsGroup = document.getElementById('server-settings-group');
-    const serverUrlInput = document.getElementById('server-url-input');
-    const ollamaKeyInput = document.getElementById('ollama-key-input');
-    const openrouterKeyInput = document.getElementById('openrouter-key-input');
-
-    if (serverUrlInput) {
-        let defaultUrl = 'https://fpt-multi-agent-system.onrender.com';
-        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '0.0.0.0' || window.location.port !== '';
-        if (isLocal) {
-            defaultUrl = window.location.origin;
-        }
-        
-        // Force local origin if accessing via localhost to prevent loading cached Render URL from localStorage
-        const storedUrl = localStorage.getItem('fpt_server_url');
-        if (isLocal) {
-            serverUrlInput.value = defaultUrl;
-            localStorage.setItem('fpt_server_url', defaultUrl);
-        } else {
-            serverUrlInput.value = storedUrl || defaultUrl;
-        }
-        
-        serverUrlInput.addEventListener('input', () => {
-            localStorage.setItem('fpt_server_url', serverUrlInput.value.trim());
-            checkServerConnection();
-        });
-    }
-
-    if (ollamaKeyInput) {
-        ollamaKeyInput.value = localStorage.getItem('fpt_ollama_api_key') || '';
-        ollamaKeyInput.addEventListener('input', () => {
-            localStorage.setItem('fpt_ollama_api_key', ollamaKeyInput.value.trim());
-        });
-    }
-
-    if (openrouterKeyInput) {
-        openrouterKeyInput.value = localStorage.getItem('fpt_openrouter_api_key') || '';
-        openrouterKeyInput.addEventListener('input', () => {
-            localStorage.setItem('fpt_openrouter_api_key', openrouterKeyInput.value.trim());
-        });
-    }
-
-    if (serverSettingsBtn && serverSettingsGroup) {
-        serverSettingsBtn.addEventListener('click', () => {
-            const isHidden = serverSettingsGroup.style.display === 'none';
-            serverSettingsGroup.style.display = isHidden ? 'block' : 'none';
-            serverSettingsBtn.style.color = isHidden ? 'var(--fpt-orange)' : '';
-        });
-    }
+    const serverSettingsBtn = null;
+    const serverSettingsGroup = null;
+    const serverUrlInput = null;
+    const ollamaKeyInput = null;
+    const openrouterKeyInput = null;
 
     function getApiPrefix() {
-        if (!serverUrlInput) return 'https://fpt-multi-agent-system.onrender.com';
-        let val = serverUrlInput.value.trim();
-        if (!val) {
-            val = 'https://fpt-multi-agent-system.onrender.com';
+        // Auto-detect: use current origin for local, or Render URL for production
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '0.0.0.0' || window.location.port !== '';
+        if (isLocal) {
+            return window.location.origin;
         }
-        if (val && !val.startsWith('http://') && !val.startsWith('https://')) {
-            val = 'http://' + val;
-        }
-        if (val && val.endsWith('/')) {
-            val = val.slice(0, -1);
-        }
-        return val;
-    }
-
-    function checkServerConnection() {
-        const dot = document.getElementById('connection-status-dot');
-        const text = document.getElementById('server-connection-text');
-        if (!dot) return;
-
-        const url = getApiPrefix() + '/api/report';
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 45000);
-
-        fetch(url, { method: 'GET', signal: controller.signal })
-            .then(res => {
-                clearTimeout(timeoutId);
-                dot.style.backgroundColor = '#10b981';
-                dot.style.boxShadow = '0 0 8px #10b981';
-                dot.title = 'Máy chủ đang hoạt động (Online)';
-                if (text) {
-                    text.textContent = 'Kết nối tốt (Online)';
-                    text.style.color = '#10b981';
-                }
-            })
-            .catch(err => {
-                clearTimeout(timeoutId);
-                dot.style.backgroundColor = '#ef4444';
-                dot.style.boxShadow = '0 0 8px #ef4444';
-                dot.title = 'Không thể kết nối máy chủ (Offline)';
-                if (text) {
-                    text.textContent = 'Ngoại tuyến (Offline)';
-                    text.style.color = '#ef4444';
-                }
-            });
+        return 'https://fpt-multi-agent-system.onrender.com';
     }
 
     let currentZoom = 100;
@@ -2645,9 +2563,7 @@ document.addEventListener('DOMContentLoaded', () => {
         consoleOutput.classList.add('hide-analysis-suffix');
     }
 
-    // Kiểm tra kết nối máy chủ ban đầu và thiết lập định kỳ mỗi 15 giây
-    checkServerConnection();
-    setInterval(checkServerConnection, 15000);
+    // Removed: checkServerConnection() — settings panel removed, auto-detect API prefix
 
     initializeOrSyncWithServer();
 });
