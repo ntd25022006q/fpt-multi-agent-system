@@ -4,7 +4,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from src.state import ResearchState
 from src.utils.llm_factory import create_llm, parse_agent_json, get_actual_model_used
 from src.utils.display import print_agent_start, print_agent_info, print_agent_complete
-from config import MODEL_RESEARCHER_AGENT
+from config import MODEL_GUARDRAIL_AGENT
 
 GUARDRAIL_PROMPT = """You are the Guardrail Agent of the Multi-Agent System specialized in FPT Software information, developed by Nguyen Tien Dat.
 
@@ -63,7 +63,6 @@ async def guardrail_node(state: ResearchState, config: RunnableConfig = None) ->
         })
         
     # Always stream — keeps TCP alive and delivers tokens in real-time
-    from config import MODEL_GUARDRAIL_AGENT
     llm = create_llm(MODEL_GUARDRAIL_AGENT, temperature=0.0, max_tokens=600, streaming=True, config=config)
     
     call_config = {}
@@ -111,7 +110,7 @@ async def guardrail_node(state: ResearchState, config: RunnableConfig = None) ->
     if hasattr(response, "usage_metadata") and response.usage_metadata:
         tokens = response.usage_metadata.get("total_tokens", 0)
     elif "token_usage" in response.response_metadata:
-        tokens = response.response_metadata["token_usage"].get("total_tokens", 0)
+        tokens = response.response_metadata.get("token_usage", {}).get("total_tokens", 0)
         
     if tokens == 0:
         tokens = (len(GUARDRAIL_PROMPT) + len(state['topic']) + len(response.content)) // 4
