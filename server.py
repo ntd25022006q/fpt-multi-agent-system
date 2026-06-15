@@ -7,6 +7,7 @@ import os
 import sys
 import time
 import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -23,12 +24,29 @@ for _s in (sys.stdout, sys.stderr):
     if hasattr(_s, "reconfigure"):
         _s.reconfigure(encoding="utf-8", errors="replace")
 
-# ── App ───────────────────────────────────────────────────────────────────────
-app = FastAPI(title="FPT Software AI-First Research & Detailed Report Dashboard")
-
-# ── Concurrent pipeline protection ───────────────────────────────────────────
-_pipeline_running = False
+# ── Concurrent pipeline protection (thread-safe via asyncio.Lock) ────────────
 _pipeline_lock = asyncio.Lock()
+
+# ── Lifespan: replaces deprecated @app.on_event("startup") ──────────────────
+@asynccontextmanager
+async def lifespan(app_instance):
+    # Startup: pre-initialize RAG cached documents in memory
+    from src.tools.rag_tools import get_all_docs
+    print("⌛ Pre-initializing RAG documents in memory...")
+    try:
+        await asyncio.to_thread(get_all_docs)
+        print("✅ RAG documents cached in memory and ready!")
+    except Exception as e:
+        print(f"⚠️ Failed to pre-initialize RAG documents: {e}")
+    yield
+    # Shutdown: cleanup if needed
+    print("🛑 Shutting down...")
+
+# ── App ───────────────────────────────────────────────────────────────────────
+app = FastAPI(
+    title="FPT Software AI-First Research & Detailed Report Dashboard",
+    lifespan=lifespan,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,16 +61,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-STATIC_DIR = Path(WORKSPACE_DIR) / "static"
-STATIC_DIR.mkdir(exist_ok=True)
-(STATIC_DIR / "lib").mkdir(parents=True, exist_ok=True)
-(STATIC_DIR / "webfonts").mkdir(parents=True, exist_ok=True)
+# ── Serve frontend assets from a single source (no duplicate static/ dir) ────
+FRONTEND_DIR = Path(WORKSPACE_DIR) / "frontend"
+FRONTEND_DIR.mkdir(exist_ok=True)
+(FRONTEND_DIR / "lib").mkdir(parents=True, exist_ok=True)
+(FRONTEND_DIR / "webfonts").mkdir(parents=True, exist_ok=True)
 
 # Mount static assets under /assets (CSS, JS, fonts etc.)
 # We do NOT mount at "/" to avoid swallowing /api/* routes
-app.mount("/assets", StaticFiles(directory=str(STATIC_DIR)), name="assets")
-app.mount("/lib", StaticFiles(directory=str(STATIC_DIR / "lib")), name="lib")
-app.mount("/webfonts", StaticFiles(directory=str(STATIC_DIR / "webfonts")), name="webfonts")
+app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIR)), name="assets")
+app.mount("/lib", StaticFiles(directory=str(FRONTEND_DIR / "lib")), name="lib")
+app.mount("/webfonts", StaticFiles(directory=str(FRONTEND_DIR / "webfonts")), name="webfonts")
 
 
 # ── Bypass header helper ──────────────────────────────────────────────────────
@@ -92,18 +111,6 @@ class BypassHeadersMiddleware:
 app.add_middleware(BypassHeadersMiddleware)
 
 
-@app.on_event("startup")
-async def startup_event():
-    # Pre-initialize RAG cached documents in memory
-    from src.tools.rag_tools import get_all_docs
-    print("⌛ Pre-initializing RAG documents in memory...")
-    try:
-        await asyncio.to_thread(get_all_docs)
-        print("✅ RAG documents cached in memory and ready!")
-    except Exception as e:
-        print(f"⚠️ Failed to pre-initialize RAG documents: {e}")
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 #  STATIC FILE ROUTES  (explicit, so /api/* is never shadowed)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -111,7 +118,7 @@ async def startup_event():
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def serve_index():
     """Serve index.html at the root."""
-    index_path = STATIC_DIR / "index.html"
+    index_path = FRONTEND_DIR / "index.html"
     if index_path.exists():
         return HTMLResponse(content=index_path.read_text(encoding="utf-8"))
     return HTMLResponse("<h1>index.html not found</h1>", status_code=404)
@@ -120,7 +127,7 @@ async def serve_index():
 @app.get("/style.css", include_in_schema=False)
 async def serve_css():
     return FileResponse(
-        str(STATIC_DIR / "style.css"),
+        str(FRONTEND_DIR / "style.css"),
         media_type="text/css",
         headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
     )
@@ -129,7 +136,7 @@ async def serve_css():
 @app.get("/app.js", include_in_schema=False)
 async def serve_js():
     return FileResponse(
-        str(STATIC_DIR / "app.js"),
+        str(FRONTEND_DIR / "app.js"),
         media_type="application/javascript",
         headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
     )
@@ -137,12 +144,12 @@ async def serve_js():
 
 @app.get("/favicon.png", include_in_schema=False)
 async def serve_favicon_png():
-    return FileResponse(str(STATIC_DIR / "favicon.png"), media_type="image/png")
+    return FileResponse(str(FRONTEND_DIR / "favicon.png"), media_type="image/png")
 
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def serve_favicon_ico():
-    return FileResponse(str(STATIC_DIR / "favicon.png"), media_type="image/png")
+    return FileResponse(str(FRONTEND_DIR / "favicon.png"), media_type="image/png")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -151,17 +158,16 @@ async def serve_favicon_ico():
 
 @app.get("/api/diagnose")
 def diagnose():
-    import os
-    from config import WORKSPACE_DIR, CHROMA_DB_DIR
+    from config import CHROMA_DB_DIR
     local_model_path = os.path.join(WORKSPACE_DIR, "data", "models", "all-MiniLM-L6-v2")
     exists = os.path.exists(local_model_path)
     files = os.listdir(local_model_path) if exists else []
-    
+
     chroma_exists = os.path.exists(CHROMA_DB_DIR)
     chroma_files = os.listdir(CHROMA_DB_DIR) if chroma_exists else []
-    
+
     from src.utils.llm_factory import _model_latencies
-    
+
     return {
         "workspace": WORKSPACE_DIR,
         "local_model_path": local_model_path,
@@ -179,23 +185,20 @@ def get_report(response: Response):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
-    
+
     report_path = Path(OUTPUT_DIR) / "research_report.md"
     diagram_path = Path(OUTPUT_DIR) / "diagram.mermaid"
     explanation_path = Path(OUTPUT_DIR) / "diagram_explanation.txt"
-    
+
     report = report_path.read_text(encoding="utf-8") if report_path.exists() else "# Báo cáo chưa được tạo"
     diagram = diagram_path.read_text(encoding="utf-8") if diagram_path.exists() else ""
     explanation = explanation_path.read_text(encoding="utf-8") if explanation_path.exists() else ""
-    
+
     return {
         "report": report,
         "diagram": diagram,
         "explanation": explanation
     }
-
-
-
 
 
 @app.get("/api/download-csv")
@@ -229,11 +232,12 @@ async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: s
     if len(topic) > 5000:
         return {"error": "Chủ đề vượt quá giới hạn 5000 ký tự."}
 
-    # Prevent concurrent pipeline runs to protect LLM API quotas and server resources
-    global _pipeline_running
-    if _pipeline_running:
+    # Prevent concurrent pipeline runs using asyncio.Lock (thread-safe)
+    if _pipeline_lock.locked():
         return {"error": "Hệ thống đang xử lý một yêu cầu khác. Vui lòng đợi hoàn thành trước khi gửi yêu cầu mới."}
-    _pipeline_running = True
+
+    # Acquire lock — will be released in the finally block of the background task
+    await _pipeline_lock.acquire()
 
     async def event_generator():
         initial_state = {
@@ -287,8 +291,8 @@ async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: s
                     "error": str(exc) + "\n" + traceback.format_exc()
                 })
             finally:
-                global _pipeline_running
-                _pipeline_running = False
+                # Always release the lock and signal completion
+                _pipeline_lock.release()
                 await stream_queue.put({
                     "type": "done_sentinel"
                 })
@@ -352,26 +356,26 @@ async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: s
                 elif event.get("type") == "graph_complete":
                     final_state = event["final_state"]
                     elapsed = time.time() - start_time
-                    
+
                     total_tokens = sum(agent_tokens.values())
                     agents_count = 1 if final_state.get("irrelevant") else (3 if final_state.get("query_type") == "qa" else 6)
-                    
+
                     # Save clean report without metrics suffix as requested
                     final_report = final_state.get("report", "# No report generated").replace("***", "")
-                    
+
                     # Clean internal filenames programmatically
                     final_report = clean_internal_filenames(final_report)
                     Path(OUTPUT_DIR).mkdir(exist_ok=True)
                     (Path(OUTPUT_DIR) / "research_report.md").write_text(final_report, encoding="utf-8")
-                    
+
                     # Read diagram and explanation if they exist to pass directly in SSE done event
                     diagram_path = Path(OUTPUT_DIR) / "diagram.mermaid"
                     explanation_path = Path(OUTPUT_DIR) / "diagram_explanation.txt"
                     diagram = diagram_path.read_text(encoding="utf-8") if diagram_path.exists() else ""
                     explanation = explanation_path.read_text(encoding="utf-8") if explanation_path.exists() else ""
-                    
+
                     explanation = clean_internal_filenames(explanation)
-                    
+
                     # Yield completion with stats, report, diagram, explanation and individual token/model/speed counts
                     yield f"data: {json.dumps({'done': True, 'report': final_report, 'diagram': diagram, 'explanation': explanation, 'stats': {'time': f'{elapsed:.3f}s', 'tokens': f'{total_tokens:,}', 'agents': agents_count, 'irrelevant': final_state.get('irrelevant', False), 'agent_tokens': agent_tokens, 'agent_models': agent_models, 'agent_toks_per_sec': agent_toks_per_sec, 'agent_durations': agent_durations}}, ensure_ascii=False)}\n\n"
                 elif event.get("type") == "node_end":
@@ -385,12 +389,12 @@ async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: s
                         agent_toks_per_sec[node_name] = event.get("toks_per_sec", 0.0)
                     if node_name in agent_durations:
                         agent_durations[node_name] = event.get("duration", 0.0)
-                        
+
                     if event.get("content"):
                         event["content"] = clean_internal_filenames(event["content"])
                     if event.get("thinking"):
                         event["thinking"] = clean_internal_filenames(event["thinking"])
-                        
+
                     yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
                 else:
                     # Clean internal filenames in any other event that might have text fields
@@ -399,7 +403,7 @@ async def run_agents(topic: str, ollama_api_key: str = "", openrouter_api_key: s
                     if event.get("thinking"):
                         event["thinking"] = clean_internal_filenames(event["thinking"])
                     yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-                    
+
         except Exception as exc:
             import traceback
             yield f"data: {json.dumps({'error': str(exc) + chr(10) + traceback.format_exc()})}\n\n"

@@ -8,6 +8,9 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+*.egg-info/
+dist/
+build/
 
 # Database / Local cache
 data/chroma_db/
@@ -21,13 +24,29 @@ output/
 Thumbs.db
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
-# Environment / Vercel Secrets
+# Environment / Secrets
 .env
 .env.local
 .env.*
 !.env.example
+
+# Vercel
 .vercel/
 
 # Headroom
 .headroom/
+
+# Duplicate static directory (now served from frontend/ only)
+static/
+
+# Logs
+*.log
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/

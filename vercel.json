@@ -1,6 +1,6 @@
 {
   "buildCommand": null,
-  "outputDirectory": "static",
+  "outputDirectory": "frontend",
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [
