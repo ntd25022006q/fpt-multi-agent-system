@@ -557,34 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ════════════════════════════════════════════════════════════════════════
     //  UNCREATED PLACEHOLDER CARDS & HISTORY HELPERS
-    // ════════════════════════════════════════════════════════════════════════
-    // ── Metrics Grid: Irrelevant Card ────────────────────────────────────────
-    const _metricsGrid = document.querySelector('.metrics-grid');
-    let _metricsIrrelevantCard = null;
-
-    const showIrrelevantMetricsCard = () => {
-        if (!_metricsGrid) return;
-        if (!_metricsIrrelevantCard) {
-            _metricsIrrelevantCard = document.createElement('div');
-            _metricsIrrelevantCard.className = 'metrics-irrelevant-card';
-            _metricsIrrelevantCard.innerHTML = `
-                <div style="text-align: center; padding: 24px 16px;">
-                    <h1 style="font-size: 14px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 8px 0;">CHỈ SỐ KHÔNG ÁP DỤNG</h1>
-                    <p style="font-size: 11.5px; color: #475569; line-height: 1.7; max-width: 260px; margin: 0 auto;">
-                        Yêu cầu bị từ chối nên không tạo chỉ số quy trình.
-                    </p>
-                </div>
-            `;
-            _metricsGrid.parentNode.insertBefore(_metricsIrrelevantCard, _metricsGrid.nextSibling);
-        }
-        _metricsGrid.style.display = 'none';
-        _metricsIrrelevantCard.style.display = 'block';
-    };
-
-    const restoreMetricsGrid = () => {
-        if (_metricsGrid) _metricsGrid.style.display = '';
-        if (_metricsIrrelevantCard) _metricsIrrelevantCard.style.display = 'none';
-    };
+    // ── Metrics Grid: kept visible at all times (including irrelevant queries) ──
 
     const showIrrelevantReportCard = () => {
         // Cancel any pending throttle render to prevent race condition
@@ -780,7 +753,6 @@ document.addEventListener('DOMContentLoaded', () => {
     //  RESET UI
     // ════════════════════════════════════════════════════════════════════════
     function resetUI() {
-        restoreMetricsGrid();
         statTime.textContent   = '0.000s';
         statTokens.textContent = '0';
         statAgents.textContent = '0 / 6';
@@ -1435,7 +1407,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         clearInterval(pollingInterval);
                         hasCompletedSuccessfully = true;
                         if (isIrrelevantReport) {
-                            showIrrelevantMetricsCard();
+                            // Metrics remain visible with default values — no rejection card
+                            statStatus.textContent = 'Bị Từ Chối';
+                            statStatus.style.color = '#dc2626';
                         } else {
                             statStatus.textContent = 'Hoàn Thành ✅';
                             statStatus.style.color = '#16a069';
@@ -1509,7 +1483,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 statTokens.textContent = data.stats.tokens;
 
                 if (data.stats.irrelevant) {
-                    showIrrelevantMetricsCard();
+                    // Metrics remain visible with default values — no rejection card
+                    statAgents.textContent = '1 / 6';
                     statStatus.textContent = 'Bị Từ Chối';
                     statStatus.style.color = '#dc2626';
                 } else {
@@ -2255,7 +2230,6 @@ document.addEventListener('DOMContentLoaded', () => {
         reportView.style.cssText = '';
         if (isIrrelevant) {
             showIrrelevantReportCard();
-            showIrrelevantMetricsCard();
         } else if (reportText.includes('Báo cáo chưa được tạo') || reportText.includes('Report not created') || reportText.includes('not generated yet')) {
             showUncreatedReportCard();
         } else if (reportText.trim().length === 0 || reportText.trim() === explanationText.trim()) {
@@ -2434,7 +2408,6 @@ document.addEventListener('DOMContentLoaded', () => {
         pendingExpContent = null;
         irrelevantDetected = false; // Reset guard flag for new runs
         topicInput.value = '';
-        restoreMetricsGrid();
         statTime.textContent   = '0.000s';
         statTokens.textContent = '0';
         statAgents.textContent = '0 / 6';
