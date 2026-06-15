@@ -200,209 +200,214 @@ document.addEventListener('DOMContentLoaded', () => {
     //  DOWNLOAD FUNCTIONS
     // ════════════════════════════════════════════════════════════════════════
 
-    // ── 1. Xuất báo cáo chi tiết (PDF) ──────────────────────────────────────
+    // ── Xuất báo cáo chi tiết dạng HTML ────────────────────────────────────
     if (downloadPdfBtn) {
-        downloadPdfBtn.addEventListener('click', async () => {
+        downloadPdfBtn.addEventListener('click', () => {
             if (!currentMarkdown || currentMarkdown.includes('not generated yet') || currentMarkdown.includes('Báo cáo chưa được tạo') || currentMarkdown.includes('IRRELEVANT') || currentMarkdown.includes('Không áp dụng')) {
-                alert('Chưa có báo cáo hợp lệ. Yêu cầu bị từ chối hoặc chưa chạy quy trình!');
+                alert('Chưa có báo cáo hợp lệ. Vui lòng chạy quy trình trước!');
                 return;
             }
 
-            const origHTML = downloadPdfBtn.innerHTML;
-            downloadPdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xuất PDF…';
-            downloadPdfBtn.disabled = true;
+            const topic = topicInput?.value || 'Báo cáo chi tiết chiến lược';
+            const dateStr = new Date().toLocaleDateString('vi-VN', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+            const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            const safeTopic = topic.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-            try {
-                if (typeof html2pdf === 'undefined') {
-                    // Fallback sang window.print() nếu thư viện chưa load
-                    console.warn('html2pdf.js chưa sẵn sàng, dùng window.print()');
-                    const topic = topicInput?.value || 'Báo cáo chi tiết chiến lược';
-                    exportViaPrint(topic);
-                    downloadPdfBtn.innerHTML = origHTML;
-                    downloadPdfBtn.disabled = false;
-                    return;
-                }
+            // Sao chép nội dung báo cáo
+            let bodyHTML = reportView.innerHTML;
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = bodyHTML;
+            tempDiv.querySelectorAll('.table-scroll-wrapper').forEach(el => {
+                const table = el.querySelector('table');
+                if (table) el.replaceWith(table.cloneNode(true));
+            });
 
-                const dateStr = new Date().toLocaleDateString('vi-VN', {
-                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-                });
-                const topic = topicInput?.value || 'Báo cáo chi tiết chiến lược';
-
-                // QUAN TRỌNG: Container phải VISIBLE (không dùng opacity:0 hay z-index:-9999)
-                // html2canvas chỉ capture nội dung hiển thị, ẩn đi = trang trắng
-                const printContainer = document.createElement('div');
-                printContainer.id = 'pdf-print-area';
-                printContainer.style.cssText = 'position:fixed;top:0;left:0;width:794px;min-height:100px;z-index:99999;pointer-events:none;background:#ffffff;color:#1a202c;font-family:"Segoe UI",Arial,sans-serif;font-size:10.5pt;line-height:1.7;overflow:hidden;';
-
-                // Nhúng style trực tiếp vào container để html2canvas render chính xác
-                const styleEl = document.createElement('style');
-                styleEl.textContent = `
-                    @page { size: A4; margin: 20mm 18mm 24mm 18mm; }
-                    .pdf-hdr { border-bottom: 3px solid #0f172a; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
-                    .pdf-hdr .co { font-size: 14pt; font-weight: 800; color: #0f172a; }
-                    .pdf-hdr .dp { font-size: 9pt; color: #6b7a90; margin-top: 2px; }
-                    .pdf-hdr .mt { text-align: right; font-size: 9pt; color: #6b7a90; line-height: 1.5; }
-                    .pdf-body h1 { font-size: 17pt; font-weight: 800; color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 5px; margin: 16px 0 10px; page-break-after: avoid; }
-                    .pdf-body h2 { font-size: 12.5pt; font-weight: 700; color: #0f172a; margin: 16px 0 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px; page-break-after: avoid; }
-                    .pdf-body h3 { font-size: 10.5pt; font-weight: 700; color: #1e293b; margin: 12px 0 4px; page-break-after: avoid; }
-                    .pdf-body p { margin-bottom: 7px; color: #2d3748; }
-                    .pdf-body ul, .pdf-body ol { margin: 4px 0 8px 18px; color: #2d3748; }
-                    .pdf-body li { margin-bottom: 2px; }
-                    .pdf-body table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 9pt; page-break-inside: avoid; }
-                    .pdf-body thead th { background: #0f172a; color: #fff; font-weight: 700; padding: 6px 8px; border: 1px solid #0f172a; }
-                    .pdf-body tbody td { border: 1px solid #cbd5e1; padding: 5px 8px; vertical-align: top; }
-                    .pdf-body tbody tr:nth-child(even) td { background: #f8fafc; }
-                    .pdf-body code { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 3px; padding: 1px 4px; font-family: 'Courier New', monospace; font-size: 8pt; color: #1e293b; }
-                    .pdf-body pre { background: #0f172a; border-radius: 4px; padding: 10px 12px; margin: 8px 0; page-break-inside: avoid; }
-                    .pdf-body pre code { background: none; border: none; color: #e2e8f0; font-size: 7.5pt; padding: 0; }
-                    .pdf-body a { color: #0f172a; }
-                    .pdf-body hr { border: none; border-top: 1px solid #e2e8f0; margin: 14px 0; }
-                    .pdf-body blockquote { border-left: 3px solid #0f172a; padding: 4px 10px; margin: 8px 0; background: #f8fafc; font-style: italic; color: #334155; }
-                    .pdf-body strong { font-weight: 700; }
-                    .pdf-body em { font-style: italic; }
-                    .pdf-body .table-scroll-wrapper { overflow: visible; }
-                `;
-                printContainer.appendChild(styleEl);
-
-                // Header báo cáo
-                const headerDiv = document.createElement('div');
-                headerDiv.className = 'pdf-hdr';
-                headerDiv.innerHTML = `
-                    <div>
-                        <div class="co">FPT Software</div>
-                        <div class="dp">Phòng Nghiên Cứu &amp; Tư Vấn Chiến Lược AI-First</div>
-                    </div>
-                    <div class="mt">
-                        Ngày xuất: ${dateStr}<br>
-                        Chủ đề: ${topic.replace(/</g,'&lt;').replace(/>/g,'&gt;')}<br>
-                        Hệ thống: Multi-Agent
-                    </div>
-                `;
-                printContainer.appendChild(headerDiv);
-
-                // Nội dung báo cáo
-                const bodyDiv = document.createElement('div');
-                bodyDiv.className = 'pdf-body';
-                bodyDiv.innerHTML = reportView.innerHTML;
-
-                // Loại bỏ wrapper tràn ngang, giữ lại bảng gốc
-                bodyDiv.querySelectorAll('.table-scroll-wrapper').forEach(el => {
-                    const table = el.querySelector('table');
-                    if (table) el.replaceWith(table.cloneNode(true));
-                });
-                bodyDiv.querySelectorAll('table').forEach(tbl => {
-                    tbl.style.overflow = 'visible';
-                    tbl.style.width = '100%';
-                    tbl.style.tableLayout = 'auto';
-                });
-
-                printContainer.appendChild(bodyDiv);
-                document.body.appendChild(printContainer);
-
-                // Đợi DOM render hoàn tất
-                await new Promise(r => setTimeout(r, 300));
-
-                const opt = {
-                    margin: [10, 12, 14, 12],
-                    filename: `BaoCao_ChiTiet_FPT_${new Date().toISOString().slice(0,10)}.pdf`,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: {
-                        scale: 2,
-                        useCORS: true,
-                        letterRendering: true,
-                        width: 794,
-                        windowWidth: 794,
-                        logging: false,
-                        allowTaint: true
-                    },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-                };
-
-                try {
-                    await html2pdf().set(opt).from(printContainer).save();
-                    document.body.removeChild(printContainer);
-                    downloadPdfBtn.innerHTML = origHTML;
-                    downloadPdfBtn.disabled = false;
-                } catch (pdfErr) {
-                    if (document.body.contains(printContainer)) document.body.removeChild(printContainer);
-                    console.error('html2pdf thất bại, chuyển sang window.print():', pdfErr);
-                    exportViaPrint(topic);
-                    downloadPdfBtn.innerHTML = origHTML;
-                    downloadPdfBtn.disabled = false;
-                }
-            } catch (err) {
-                // Cleanup: remove printContainer if it was added to DOM but not cleaned up
-                const staleContainer = document.getElementById('pdf-print-area');
-                if (staleContainer && document.body.contains(staleContainer)) {
-                    document.body.removeChild(staleContainer);
-                }
-                console.error('Lỗi xuất PDF:', err);
-                alert(`Lỗi xuất PDF: ${err.message}`);
-                downloadPdfBtn.innerHTML = origHTML;
-                downloadPdfBtn.disabled = false;
-            }
-        });
-    }
-
-    // ── 1b. Fallback: xuất PDF qua window.print() ─────────────────────────
-    function exportViaPrint(topic) {
-        const dateStr = new Date().toLocaleDateString('vi-VN', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-        });
-        const printHtml = `<!DOCTYPE html>
+            const htmlContent = `<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Báo Cáo Chi Tiết — FPT Software</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Báo Cáo Chi Tiết — FPT Software | ${safeTopic}</title>
 <style>
-@page { size: A4; margin: 20mm 18mm 24mm 18mm; }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Segoe UI',Arial,sans-serif;font-size:10.5pt;color:#1a202c;line-height:1.7;}
-.hdr{border-bottom:3px solid #0f172a;padding-bottom:10px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-end;}
-.hdr .co{font-size:14pt;font-weight:800;color:#0f172a;}
-.hdr .dp{font-size:9pt;color:#6b7a90;margin-top:2px;}
-.hdr .mt{text-align:right;font-size:9pt;color:#6b7a90;line-height:1.5;}
-h1{font-size:17pt;font-weight:800;color:#0f172a;border-bottom:2px solid #0f172a;padding-bottom:5px;margin:16px 0 10px;page-break-after:avoid;}
-h2{font-size:12.5pt;font-weight:700;color:#0f172a;margin:16px 0 6px;border-bottom:1px solid #e2e8f0;padding-bottom:2px;page-break-after:avoid;}
-h3{font-size:10.5pt;font-weight:700;color:#1e293b;margin:12px 0 4px;page-break-after:avoid;}
-p{margin-bottom:7px;color:#2d3748;}
-ul,ol{margin:4px 0 8px 18px;color:#2d3748;}
-li{margin-bottom:2px;}
-table{width:100%;border-collapse:collapse;margin:10px 0 14px;font-size:9pt;page-break-inside:avoid;}
-thead th{background:#0f172a;color:#fff;font-weight:700;padding:6px 8px;border:1px solid #0f172a;}
-tbody td{border:1px solid #cbd5e1;padding:5px 8px;vertical-align:top;}
-tbody tr:nth-child(even) td{background:#f8fafc;}
-code{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:3px;padding:1px 4px;font-family:'Courier New',monospace;font-size:8pt;color:#1e293b;}
-pre{background:#0f172a;border-radius:4px;padding:10px 12px;margin:8px 0;page-break-inside:avoid;}
-pre code{background:none;border:none;color:#e2e8f0;font-size:7.5pt;padding:0;}
-a{color:#0f172a;}
-hr{border:none;border-top:1px solid #e2e8f0;margin:14px 0;}
-blockquote{border-left:3px solid #0f172a;padding:4px 10px;margin:8px 0;background:#f8fafc;font-style:italic;color:#334155;}
-em{font-style:italic;}strong{font-weight:700;}
-@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}h1,h2,h3{page-break-after:avoid;}table,pre{page-break-inside:avoid;}}
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    background: #f8fafc;
+    color: #1e293b;
+    line-height: 1.8;
+    font-size: 15px;
+  }
+  .cover {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+    color: #ffffff;
+    padding: 60px 50px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle at 30% 70%, rgba(255,255,255,0.03) 0%, transparent 50%),
+                radial-gradient(circle at 70% 30%, rgba(59,130,246,0.06) 0%, transparent 50%);
+  }
+  .cover-logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 40px;
+  }
+  .logo-mark {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, #ff6b00, #ff8c38);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Inter', sans-serif;
+    font-weight: 800; font-size: 24px; color: #fff;
+    letter-spacing: -1px;
+    box-shadow: 0 4px 20px rgba(255,107,0,0.35);
+  }
+  .logo-text {
+    font-size: 22px; font-weight: 800; letter-spacing: -0.5px; color: #fff;
+  }
+  .logo-sub { font-size: 12px; color: rgba(255,255,255,0.6); font-weight: 400; margin-top: 2px; }
+  .cover-title {
+    font-size: 32px; font-weight: 800; line-height: 1.3;
+    margin-bottom: 12px; letter-spacing: -0.5px;
+    color: #ffffff;
+  }
+  .cover-divider {
+    width: 80px; height: 4px;
+    background: linear-gradient(90deg, #ff6b00, #ff8c38);
+    border-radius: 2px; margin-bottom: 20px;
+  }
+  .cover-meta { display: flex; flex-wrap: wrap; gap: 30px; margin-top: 10px; }
+  .cover-meta-item { font-size: 13px; color: rgba(255,255,255,0.7); }
+  .cover-meta-item strong { color: #fff; font-weight: 600; }
+  .cover-badge {
+    position: absolute; top: 50px; right: 50px;
+    background: rgba(255,107,0,0.15); border: 1px solid rgba(255,107,0,0.3);
+    border-radius: 8px; padding: 8px 16px;
+    font-size: 11px; font-weight: 700; color: #ff8c38;
+    letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .content {
+    max-width: 900px; margin: 0 auto;
+    padding: 40px 50px 60px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .content h1 {
+    font-size: 26px; font-weight: 800; color: #0f172a;
+    border-bottom: 2px solid #0f172a; padding-bottom: 8px;
+    margin: 36px 0 16px;
+  }
+  .content h2 {
+    font-size: 20px; font-weight: 700; color: #0f172a;
+    border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;
+    margin: 30px 0 12px;
+  }
+  .content h3 {
+    font-size: 17px; font-weight: 700; color: #1e293b;
+    margin: 24px 0 8px;
+  }
+  .content p { margin-bottom: 12px; color: #334155; }
+  .content ul, .content ol { margin: 8px 0 14px 24px; color: #334155; }
+  .content li { margin-bottom: 4px; }
+  .content table {
+    width: 100%; border-collapse: collapse; margin: 16px 0 20px;
+    font-size: 14px; border-radius: 8px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .content thead th {
+    background: #0f172a; color: #fff; font-weight: 700;
+    padding: 12px 14px; text-align: left;
+  }
+  .content tbody td {
+    border: 1px solid #e2e8f0; padding: 10px 14px; vertical-align: top;
+  }
+  .content tbody tr:nth-child(even) td { background: #f8fafc; }
+  .content code {
+    background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px;
+    padding: 2px 6px; font-family: 'Courier New', monospace; font-size: 13px; color: #1e293b;
+  }
+  .content pre {
+    background: #0f172a; border-radius: 8px; padding: 16px 18px; margin: 14px 0;
+    overflow-x: auto;
+  }
+  .content pre code {
+    background: none; border: none; color: #e2e8f0; font-size: 13px; padding: 0;
+  }
+  .content a { color: #1d4ed8; text-decoration: none; }
+  .content a:hover { text-decoration: underline; }
+  .content hr { border: none; border-top: 1px solid #e2e8f0; margin: 24px 0; }
+  .content blockquote {
+    border-left: 4px solid #ff6b00; padding: 10px 18px; margin: 14px 0;
+    background: #fffbf5; font-style: italic; color: #4a5568;
+    border-radius: 0 6px 6px 0;
+  }
+  .content strong { font-weight: 700; }
+  .content em { font-style: italic; }
+  .footer {
+    max-width: 900px; margin: 0 auto; padding: 20px 50px;
+    font-size: 12px; color: #94a3b8; text-align: center;
+    border-top: 1px solid #e2e8f0;
+  }
+  .footer a { color: #64748b; }
+  @media print {
+    body { background: #fff; }
+    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .content { box-shadow: none; }
+  }
 </style>
 </head>
 <body>
-<div class="hdr">
-  <div><div class="co">FPT Software</div><div class="dp">Phòng Nghiên Cứu &amp; Tư Vấn Chiến Lược AI-First</div></div>
-  <div class="mt">Ngày xuất: ${dateStr}<br>Chủ đề: ${topic || 'Báo cáo chi tiết chiến lược'}<br>Hệ thống: Multi-Agent</div>
+
+<div class="cover">
+  <div class="cover-badge">Multi-Agent AI</div>
+  <div class="cover-logo">
+    <div class="logo-mark">FPT</div>
+    <div>
+      <div class="logo-text">FPT Software</div>
+      <div class="logo-sub">Phòng Nghiên Cứu & Tư Vấn Chiến Lược AI-First</div>
+    </div>
+  </div>
+  <div class="cover-title">${safeTopic}</div>
+  <div class="cover-divider"></div>
+  <div class="cover-meta">
+    <div class="cover-meta-item"><strong>Ngày xuất:</strong> ${dateStr} — ${timeStr}</div>
+    <div class="cover-meta-item"><strong>Hệ thống:</strong> Multi-Agent AI Pipeline</div>
+    <div class="cover-meta-item"><strong>Bảo mật:</strong> Nội bộ</div>
+  </div>
 </div>
-${reportView.innerHTML}
+
+<div class="content">
+${tempDiv.innerHTML}
+</div>
+
+<div class="footer">
+  Báo cáo được tạo tự động bởi hệ thống Multi-Agent AI của FPT Software &mdash; ${dateStr} ${timeStr}<br>
+  <a href="https://fpt-multi-agent-system.vercel.app/">fpt-multi-agent-system.vercel.app</a>
+</div>
+
 </body>
 </html>`;
-        const printWin = window.open('', '_blank', 'width=900,height=700');
-        if (printWin) {
-            printWin.document.write(printHtml);
-            printWin.document.close();
-            printWin.onload = () => {
-                setTimeout(() => {
-                    printWin.print();
-                }, 500);
-            };
-        } else {
-            alert('Trình duyệt đã chặn cửa sổ in. Vui lòng cho phép cửa sổ bật lên và thử lại.');
-        }
+
+            // Tải file HTML
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `BaoCao_ChiTiet_FPT_${new Date().toISOString().slice(0,10)}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
     }
 
     // ── 2. Xuất sơ đồ quy trình (PNG) ─────────────────────────────────────

@@ -22,8 +22,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/contrib/auto-render.min.js" crossorigin="anonymous"></script>
     <!-- Mermaid Diagram Library -->
     <script src="lib/mermaid.min.js"></script>
-    <!-- html2pdf.js: xuất báo cáo chi tiết định dạng PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous"></script>
+
     <script>
         mermaid.initialize({
             startOnLoad: false,
@@ -94,7 +93,7 @@
                     <!-- Download Buttons (hidden until report is ready) -->
                     <div id="download-group" style="display:none; flex-direction:column; gap:6px; margin-top:10px;">
                         <button id="download-pdf-btn" class="action-btn" style="width:100%;justify-content:center;gap:8px;padding:10px;font-size:11px;border-radius:6px;border-color: #93c5fd; color: #1d4ed8; background: #ffffff;">
-                            <i class="fa-solid fa-file-pdf"></i> Xuất báo cáo chi tiết
+                            <i class="fa-solid fa-file-code"></i> Xuất báo cáo chi tiết (HTML)
                         </button>
                         <button id="download-diagram-btn" class="action-btn" style="width:100%;justify-content:center;gap:8px;padding:10px;font-size:11px;border-radius:6px;">
                             <i class="fa-solid fa-image"></i> Xuất sơ đồ quy trình
@@ -328,6 +327,6 @@
     </div>
 
     <!-- App Script -->
-    <script src="app.js?v=38"></script>
+    <script src="app.js?v=39"></script>
 </body>
 </html>
